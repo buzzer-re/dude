@@ -11,22 +11,22 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #1a1714;
-      --bg2: #211e19;
-      --surface: #2a2520;
-      --surface2: #332d27;
-      --border: #3d362e;
-      --border-light: #4a423a;
-      --cream: #ede8d0;
-      --cream-dim: #a89f8b;
-      --cream-faint: #706758;
-      --orange: #e8572a;
-      --orange-dim: #c44a22;
-      --sage: #7d9e82;
-      --sage-dim: #5a7a5f;
-      --sky: #6fa8c7;
-      --amber: #d4a843;
-      --red: #c74040;
+      --bg: #1e1e2e;
+      --bg2: #181825;
+      --surface: #313244;
+      --surface2: #45475a;
+      --border: #45475a;
+      --border-light: #585b70;
+      --cream: #cdd6f4;
+      --cream-dim: #a6adc8;
+      --cream-faint: #6c7086;
+      --orange: #89b4fa;
+      --orange-dim: #74c7ec;
+      --sage: #a6e3a1;
+      --sage-dim: #94e2d5;
+      --sky: #89dceb;
+      --amber: #f9e2af;
+      --red: #f38ba8;
       --font-serif: 'Instrument Serif', Georgia, serif;
       --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
     }
@@ -46,7 +46,7 @@
     body::after {
       content: '';
       position: fixed; inset: 0;
-      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.03'/%3E%3C/svg%3E");
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.02'/%3E%3C/svg%3E");
       pointer-events: none;
       z-index: 9999;
     }
@@ -72,7 +72,7 @@
     ═══════════════════════════════════════════════════ */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(26, 23, 20, 0.85);
+      background: rgba(30, 30, 46, 0.85);
       backdrop-filter: blur(12px) saturate(1.2);
       border-bottom: 1px solid var(--border);
     }
@@ -82,11 +82,23 @@
       padding: 0 32px; height: 56px;
     }
     .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--cream);
+      letter-spacing: -0.02em;
+      text-decoration: none !important;
+    }
+    .nav-logo:hover .nav-logo-face { color: var(--orange); }
+    .nav-logo-text {
       font-family: var(--font-serif);
       font-size: 1.6rem;
       font-style: italic;
-      color: var(--cream);
-      letter-spacing: -0.02em;
+    }
+    .nav-logo-face {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-style: normal;
+      color: var(--cream-dim);
+      letter-spacing: 0;
     }
     .nav-links { display: flex; gap: 6px; align-items: center; }
     .nav-links a {
@@ -221,7 +233,7 @@
       content: '';
       position: absolute; inset: -1px;
       border-radius: 9px;
-      background: linear-gradient(135deg, rgba(232,87,42,0.15), transparent 40%);
+      background: linear-gradient(135deg, rgba(137,180,250,0.15), transparent 40%);
       pointer-events: none;
     }
     .term-bar {
@@ -231,9 +243,9 @@
       border-bottom: 1px solid var(--border);
     }
     .term-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .term-dot.r { background: #c74040; }
-    .term-dot.y { background: #d4a843; }
-    .term-dot.g { background: #7d9e82; }
+    .term-dot.r { background: #f38ba8; }
+    .term-dot.y { background: #f9e2af; }
+    .term-dot.g { background: #a6e3a1; }
     .term-title {
       flex: 1; text-align: center;
       font-size: 11px; color: var(--cream-faint);
@@ -317,7 +329,7 @@
       transition: background 0.3s;
     }
     .feature-row:last-child { border-bottom: 1px solid var(--border); }
-    .feature-row:hover { background: rgba(232, 87, 42, 0.03); }
+    .feature-row:hover { background: rgba(137, 180, 250, 0.03); }
     .feature-num {
       font-size: 48px;
       font-family: var(--font-serif);
@@ -398,10 +410,10 @@
       flex-shrink: 0;
       font-size: 15px;
     }
-    .mode-icon.blocked { background: rgba(199,64,64,0.15); color: var(--red); }
-    .mode-icon.confirm { background: rgba(125,158,130,0.15); color: var(--sage); }
-    .mode-icon.auto    { background: rgba(212,168,67,0.15); color: var(--amber); }
-    .mode-icon.yolo    { background: rgba(232,87,42,0.15); color: var(--orange); }
+    .mode-icon.blocked { background: rgba(243,139,168,0.15); color: var(--red); }
+    .mode-icon.confirm { background: rgba(166,227,161,0.15); color: var(--sage); }
+    .mode-icon.auto    { background: rgba(249,226,175,0.15); color: var(--amber); }
+    .mode-icon.yolo    { background: rgba(137,180,250,0.15); color: var(--orange); }
     .safety-mode strong { color: var(--cream); }
     .safety-mode span { color: var(--cream-dim); }
 
@@ -702,7 +714,10 @@
 <!-- ════════ NAV ════════ -->
 <nav>
   <div class="nav-inner">
-    <div class="nav-logo">dude</div>
+    <a href="#" class="nav-logo">
+      <span class="nav-logo-face">(&#x2310;&#x25A0;_&#x25A0;)</span>
+      <span class="nav-logo-text">dude</span>
+    </a>
     <div class="nav-links">
       <a href="#features">Features</a>
       <a href="#safety">Safety</a>
@@ -912,7 +927,7 @@
     <div class="prov-card">
       <div class="prov-head">
         <div class="prov-tag local">Local &middot; Free &middot; Private</div>
-        <h3>Ollama</h3>
+        <h3><a href="https://ollama.com" target="_blank" style="color:inherit">Ollama</a></h3>
         <p>Local models, no network, no cost. Your data never leaves your machine.</p>
       </div>
       <div class="prov-code">
@@ -925,7 +940,7 @@
     <div class="prov-card">
       <div class="prov-head">
         <div class="prov-tag cloud">Cloud &middot; Smart &middot; Fast</div>
-        <h3>Claude</h3>
+        <h3><a href="https://claude.ai" target="_blank" style="color:inherit">Claude</a></h3>
         <p>For when you need serious brainpower. Auto-reads your Claude Code OAuth token.</p>
       </div>
       <div class="prov-code">

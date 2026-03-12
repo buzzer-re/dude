@@ -43,14 +43,6 @@ enum Commands {
         /// The question
         question: Vec<String>,
     },
-    /// Handle a command-not-found (called by the shell plugin)
-    #[command(name = "cnf")]
-    CommandNotFound {
-        /// The command that wasn't found
-        cmd: String,
-        /// Arguments that were passed
-        args: Vec<String>,
-    },
     /// Record that the user accepted a suggestion
     #[command(name = "accept")]
     Accept {
@@ -109,7 +101,6 @@ fn main() {
         Some(Commands::Forget) => commands::forget(),
         Some(Commands::Config) => commands::edit_config(),
         Some(Commands::Ask { question }) => commands::ask(&question.join(" ")),
-        Some(Commands::CommandNotFound { cmd, args }) => commands::command_not_found(&cmd, &args),
         Some(Commands::Accept { typo, correction }) => commands::accept(&typo, &correction),
         Some(Commands::Status) => commands::status(),
         Some(Commands::Context { question }) => commands::show_context(&question.join(" ")),
@@ -130,7 +121,6 @@ fn is_known_subcommand(arg: &str) -> bool {
             | "forget"
             | "config"
             | "ask"
-            | "cnf"
             | "accept"
             | "status"
             | "context"

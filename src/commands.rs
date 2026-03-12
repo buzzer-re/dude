@@ -197,45 +197,6 @@ pub fn ask(question: &str) {
     }
 }
 
-pub fn command_not_found(failed_cmd: &str, args: &[String]) {
-    let config = config::Config::load();
-    let profile = profile::Profile::load();
-
-    let full_input = if args.is_empty() {
-        failed_cmd.to_string()
-    } else {
-        format!("{} {}", failed_cmd, args.join(" "))
-    };
-
-    match suggest::suggest_correction(failed_cmd, args, &config, &profile) {
-        suggest::Suggestion::Command(cmd) => {
-            if safety::is_destructive(&cmd) {
-                eprintln!(
-                    "{} {} (blocked — looks destructive)",
-                    "dude:".yellow().bold(),
-                    cmd.red().bold()
-                );
-                audit::log_interaction(&full_input, Some(&cmd), false);
-                std::process::exit(2);
-            }
-
-            eprintln!("{} {}", "dude:".yellow().bold(), cmd.white().bold());
-            println!("{cmd}");
-            audit::log_interaction(&full_input, Some(&cmd), false);
-        }
-        suggest::Suggestion::Text(text) => {
-            eprintln!("{} {}", "dude:".yellow().bold(), text.white());
-            audit::log_interaction(&full_input, Some(&text), false);
-            std::process::exit(1);
-        }
-        suggest::Suggestion::NotAvailable(msg) => {
-            eprintln!("{msg}");
-            audit::log_interaction(&full_input, None, false);
-            std::process::exit(1);
-        }
-    }
-}
-
 pub fn accept(typo: &str, correction: &str) {
     if let Ok(corrections) = corrections::Corrections::open() {
         corrections.record(typo, correction);

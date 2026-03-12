@@ -42,60 +42,30 @@ fn provider_unavailable_msg(config: &Config) -> String {
     }
 }
 
-/// Main suggestion logic: fast path (local corrections) → slow path (LLM).
-pub fn suggest_correction(
-    failed_command: &str,
-    args: &[String],
-    config: &Config,
-    profile: &Profile,
-) -> Suggestion {
-    // Fast path: check local corrections database
+/// Ask a direct question (the "? question" mode).
+/// Also checks the local corrections database first for instant typo fixes.
+pub fn ask_question(question: &str, config: &Config, profile: &Profile) -> Suggestion {
+    // Fast path: check local corrections database for learned typos.
+    // This handles "gti stauts" → "git status" without hitting the LLM.
     if let Ok(corrections) = Corrections::open() {
-        let full = if args.is_empty() {
-            failed_command.to_string()
-        } else {
-            format!("{} {}", failed_command, args.join(" "))
-        };
-
-        // Check full command string first (e.g. "gti status" -> "git status")
-        if let Some(correction) = corrections.confident_correction(&full) {
+        // Try the full string (e.g. "gti stauts" → "git status")
+        if let Some(correction) = corrections.confident_correction(question) {
             return Suggestion::Command(correction);
         }
-
-        // Check just the command word (e.g. "gti" -> "git"), then append original args
-        if let Some(correction) = corrections.confident_correction(failed_command) {
-            let suggested = if args.is_empty() || correction.contains(' ') {
-                correction
-            } else {
-                format!("{} {}", correction, args.join(" "))
-            };
-            return Suggestion::Command(suggested);
-        }
-    }
-
-    // Slow path: ask LLM
-    if !provider_available(config) {
-        return Suggestion::NotAvailable(provider_unavailable_msg(config));
-    }
-
-    let system = context::build_system_prompt(profile);
-    let prompt = context::build_command_prompt(failed_command, args, config.history_context);
-
-    match query_provider(&system, &prompt, config) {
-        Ok(response) => {
-            let cleaned = clean_response(&response);
-            if cleaned.is_empty() {
-                Suggestion::NotAvailable("dude: got nothing useful back".into())
-            } else {
-                Suggestion::Command(cleaned)
+        // Try just the first word (e.g. "gti" → "git") + keep the rest
+        let parts: Vec<&str> = question.splitn(2, ' ').collect();
+        if parts.len() == 2 {
+            if let Some(correction) = corrections.confident_correction(parts[0]) {
+                let suggested = if correction.contains(' ') {
+                    correction
+                } else {
+                    format!("{} {}", correction, parts[1])
+                };
+                return Suggestion::Command(suggested);
             }
         }
-        Err(e) => Suggestion::NotAvailable(e),
     }
-}
 
-/// Ask a direct question (the "? question" mode).
-pub fn ask_question(question: &str, config: &Config, profile: &Profile) -> Suggestion {
     if !provider_available(config) {
         return Suggestion::NotAvailable(provider_unavailable_msg(config));
     }

@@ -46,7 +46,8 @@ User context:
     )
 }
 
-/// Build the user prompt for a command-not-found scenario.
+/// Build the user prompt for a command-not-found scenario (used in tests).
+#[cfg(test)]
 pub fn build_command_prompt(failed_command: &str, args: &[String], history_count: usize) -> String {
     let cwd = cwd_string();
     let history_str = format_recent_history(history_count, history_count);

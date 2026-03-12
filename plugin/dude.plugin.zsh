@@ -27,20 +27,29 @@ _DUDE_LAST_CMD=""
 _DUDE_LAST_CMD_FILE="/tmp/dude_last_cmd.$USER"
 
 # ─── command_not_found_handler ───────────────────────────────────────────
+_DUDE_CNF_ACTIVE=0
+
 command_not_found_handler() {
+    # Guard against infinite loops: if dude suggests a command that also
+    # doesn't exist, we'd re-enter this handler forever. Bail out if
+    # we're already inside a correction.
+    if [[ $_DUDE_CNF_ACTIVE -ne 0 ]]; then
+        echo "zsh: command not found: $1" >&2
+        return 127
+    fi
+    _DUDE_CNF_ACTIVE=1
+
     local failed_cmd="$1"
     shift
     local args=("$@")
 
     local suggestion
-    suggestion=$("$DUDE_BIN" cnf "$failed_cmd" "${args[@]}" 2>/dev/tty)
+    local full_cmd="$failed_cmd${args:+ ${args[*]}}"
+    suggestion=$("$DUDE_BIN" ask "$full_cmd" 2>/dev/tty)
     local exit_code=$?
 
-    if [[ $exit_code -ne 0 ]]; then
-        return 127
-    fi
-
-    if [[ -z "$suggestion" ]]; then
+    if [[ $exit_code -ne 0 || -z "$suggestion" ]]; then
+        _DUDE_CNF_ACTIVE=0
         return 127
     fi
 
@@ -51,13 +60,15 @@ command_not_found_handler() {
 
     if [[ $safety_exit -eq 0 ]]; then
         "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &!
-        # Inject the corrected command into shell history
         print -s "$suggestion"
         eval "$suggestion"
-        return $?
+        local ret=$?
+        _DUDE_CNF_ACTIVE=0
+        return $ret
     fi
 
     if [[ $safety_exit -eq 2 ]]; then
+        _DUDE_CNF_ACTIVE=0
         return 127
     fi
 
@@ -67,12 +78,13 @@ command_not_found_handler() {
 
     if [[ "$response" == $'\n' || "$response" == "y" || "$response" == "Y" || "$response" == "" ]]; then
         "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &!
-        # Inject the corrected command into shell history
         print -s "$suggestion"
         eval "$suggestion"
     else
+        _DUDE_CNF_ACTIVE=0
         return 127
     fi
+    _DUDE_CNF_ACTIVE=0
 }
 
 # ─── "?" prefix — intercept via accept-line widget ──────────────────────

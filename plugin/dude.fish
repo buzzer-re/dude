@@ -21,16 +21,28 @@ if not test -f "$config_dir/dude/profile.toml"
 end
 
 # ─── fish_command_not_found handler ──────────────────────────────────────
+set -g _DUDE_CNF_ACTIVE 0
+
 function fish_command_not_found
+    # Guard against infinite loops: if the suggestion also doesn't exist
+    # we'd re-enter this handler forever.
+    if test "$_DUDE_CNF_ACTIVE" -ne 0
+        echo "fish: Unknown command: $argv[1]" >&2
+        return 127
+    end
+    set -g _DUDE_CNF_ACTIVE 1
+
     set -l failed_cmd $argv[1]
     set -l args $argv[2..]
 
     # Get suggestion from dude
-    set -l suggestion ($DUDE_BIN cnf $failed_cmd $args 2>/dev/tty)
+    set -l full_cmd "$failed_cmd $args"
+    set -l suggestion ($DUDE_BIN ask $full_cmd 2>/dev/tty)
     set -l exit_code $status
 
     if test $exit_code -ne 0; or test -z "$suggestion"
         echo "fish: Unknown command: $failed_cmd" >&2
+        set -g _DUDE_CNF_ACTIVE 0
         return 127
     end
 
@@ -44,10 +56,13 @@ function fish_command_not_found
         builtin history merge
         builtin history add -- "$suggestion"
         eval $suggestion
-        return $status
+        set -l ret $status
+        set -g _DUDE_CNF_ACTIVE 0
+        return $ret
     end
 
     if test $safety_exit -eq 2
+        set -g _DUDE_CNF_ACTIVE 0
         return 127
     end
 
@@ -60,8 +75,10 @@ function fish_command_not_found
         builtin history add -- "$suggestion"
         eval $suggestion
     else
+        set -g _DUDE_CNF_ACTIVE 0
         return 127
     end
+    set -g _DUDE_CNF_ACTIVE 0
 end
 
 # ─── Track last command for "why did that fail" ─────────────────────────

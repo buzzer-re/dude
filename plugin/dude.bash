@@ -24,18 +24,30 @@ fi
 _DUDE_LAST_CMD_FILE="/tmp/dude_last_cmd.$USER"
 
 # ─── command_not_found_handle (bash — no trailing 'r') ──────────────────
+_DUDE_CNF_ACTIVE=0
+
 command_not_found_handle() {
+    # Guard against infinite loops: if the suggestion also doesn't exist
+    # we'd re-enter this handler forever.
+    if [[ $_DUDE_CNF_ACTIVE -ne 0 ]]; then
+        echo "bash: $1: command not found" >&2
+        return 127
+    fi
+    _DUDE_CNF_ACTIVE=1
+
     local failed_cmd="$1"
     shift
     local args=("$@")
 
     # Get suggestion from dude
     local suggestion
-    suggestion=$("$DUDE_BIN" cnf "$failed_cmd" "${args[@]}" 2>/dev/tty)
+    local full_cmd="$failed_cmd${args:+ ${args[*]}}"
+    suggestion=$("$DUDE_BIN" ask "$full_cmd" 2>/dev/tty)
     local exit_code=$?
 
     if [[ $exit_code -ne 0 || -z "$suggestion" ]]; then
         echo "bash: $failed_cmd: command not found" >&2
+        _DUDE_CNF_ACTIVE=0
         return 127
     fi
 
@@ -49,10 +61,13 @@ command_not_found_handle() {
         disown
         history -s "$suggestion"
         eval "$suggestion"
-        return $?
+        local ret=$?
+        _DUDE_CNF_ACTIVE=0
+        return $ret
     fi
 
     if [[ $safety_exit -eq 2 ]]; then
+        _DUDE_CNF_ACTIVE=0
         return 127
     fi
 
@@ -67,8 +82,10 @@ command_not_found_handle() {
         history -s "$suggestion"
         eval "$suggestion"
     else
+        _DUDE_CNF_ACTIVE=0
         return 127
     fi
+    _DUDE_CNF_ACTIVE=0
 }
 
 # ─── "?" prefix — intercept via DEBUG trap + extdebug ────────────────────
