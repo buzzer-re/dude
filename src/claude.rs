@@ -99,15 +99,9 @@ fn read_keychain_oauth() -> Option<String> {
 pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<String, String> {
     let auth = resolve_auth(config)?;
 
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(60))
-        .build()
-        .map_err(|e| format!("HTTP client error: {e}"))?;
+    let client = crate::config::http_client(60)?;
 
-    let model = config
-        .claude_model
-        .as_deref()
-        .unwrap_or("claude-haiku-4-5-20251001");
+    let model = config.effective_claude_model();
 
     let request = ClaudeRequest {
         model: model.to_string(),

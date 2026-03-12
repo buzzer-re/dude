@@ -26,10 +26,7 @@ struct OllamaResponse {
 }
 
 pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<String, String> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(60))
-        .build()
-        .map_err(|e| format!("HTTP client error: {e}"))?;
+    let client = crate::config::http_client(60)?;
 
     let model = config.effective_model();
 
@@ -116,12 +113,9 @@ fn extract_answer_from_thinking(thinking: &str) -> String {
 }
 
 pub fn check_available(config: &Config) -> bool {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(2))
-        .build();
-
-    let Ok(client) = client else { return false };
-
+    let Ok(client) = crate::config::http_client(2) else {
+        return false;
+    };
     client
         .get(config.effective_ollama_url())
         .send()

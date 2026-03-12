@@ -2,6 +2,7 @@ use crate::claude;
 use crate::config::Config;
 use crate::context;
 use crate::corrections::Corrections;
+use crate::filter;
 use crate::ollama;
 use crate::profile::Profile;
 use crate::session;
@@ -14,11 +15,13 @@ pub enum Suggestion {
 }
 
 /// Query the configured provider (ollama or claude).
+/// Applies secret redaction to the prompt before sending.
 fn query_provider(system: &str, prompt: &str, config: &Config) -> Result<String, String> {
+    let redacted_prompt = filter::redact_secrets(prompt);
     if config.use_claude() {
-        claude::query(system, prompt, config)
+        claude::query(system, &redacted_prompt, config)
     } else {
-        ollama::query(system, prompt, config)
+        ollama::query(system, &redacted_prompt, config)
     }
 }
 
@@ -55,12 +58,12 @@ pub fn suggest_correction(
         };
 
         // Check full command string first (e.g. "gti status" -> "git status")
-        if let Some(correction) = corrections.is_confident(&full) {
+        if let Some(correction) = corrections.confident_correction(&full) {
             return Suggestion::Command(correction);
         }
 
         // Check just the command word (e.g. "gti" -> "git"), then append original args
-        if let Some(correction) = corrections.is_confident(failed_command) {
+        if let Some(correction) = corrections.confident_correction(failed_command) {
             let suggested = if args.is_empty() || correction.contains(' ') {
                 correction
             } else {
@@ -151,8 +154,9 @@ fn strip_thinking_tags(response: &str) -> String {
     let mut result = response.to_string();
     // Handle <think>...</think> blocks (qwen3, deepseek-r1)
     while let Some(start) = result.find("<think>") {
-        if let Some(end) = result.find("</think>") {
-            result = format!("{}{}", &result[..start], &result[end + 8..]);
+        if let Some(end) = result[start..].find("</think>") {
+            let abs_end = start + end + 8;
+            result = format!("{}{}", &result[..start], &result[abs_end..]);
         } else {
             // Unclosed think tag — strip from <think> to end
             result = result[..start].to_string();
@@ -187,4 +191,55 @@ fn clean_response(response: &str) -> String {
     let first_line = stripped.lines().next().unwrap_or("").trim();
 
     first_line.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clean_response_plain() {
+        assert_eq!(clean_response("git status"), "git status");
+    }
+
+    #[test]
+    fn test_clean_response_backticks() {
+        assert_eq!(clean_response("`git status`"), "git status");
+    }
+
+    #[test]
+    fn test_clean_response_code_fence() {
+        assert_eq!(clean_response("```bash\ngit status\n```"), "git status");
+    }
+
+    #[test]
+    fn test_clean_response_multiline_takes_first() {
+        assert_eq!(clean_response("git add .\ngit commit"), "git add .");
+    }
+
+    #[test]
+    fn test_strip_thinking_tags() {
+        let input = "<think>let me think</think>git status";
+        assert_eq!(strip_thinking_tags(input), "git status");
+    }
+
+    #[test]
+    fn test_strip_thinking_tags_unclosed() {
+        let input = "<think>still thinking...";
+        assert_eq!(strip_thinking_tags(input), "");
+    }
+
+    #[test]
+    fn test_strip_thinking_tags_with_content_after() {
+        let input = "prefix<think>thinking</think>suffix";
+        assert_eq!(strip_thinking_tags(input), "prefixsuffix");
+    }
+
+    #[test]
+    fn test_strip_thinking_tags_malformed_order() {
+        // </think> appears before <think> — should not corrupt
+        let input = "</think>before<think>thinking</think>after";
+        let result = strip_thinking_tags(input);
+        assert!(result.contains("after") || result.contains("before"));
+    }
 }

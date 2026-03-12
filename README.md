@@ -1,6 +1,8 @@
-# The Dude
+# The Dude (⌐■_■)
 
 **The shell companion for REALLY lazy people**
+
+https://github.com/buzzer-re/dude/raw/main/demo/demo.mp4
 
 You know when you type `gti status` instead of `git status` and your terminal just stares at you? Dude fixes that. You know when you forget the `find` flags for the 400th time? Dude knows them. You know when you're too lazy to google "how to kill process on port 3000"? Just ask Dude.
 

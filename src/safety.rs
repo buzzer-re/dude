@@ -22,72 +22,99 @@ pub fn is_destructive(command: &str) -> bool {
 
 /// Check if a command needs confirmation in the given safety mode.
 /// Returns: true = needs confirmation, false = safe to auto-run
-pub fn needs_confirmation(command: &str, safety_mode: &str) -> bool {
+pub fn needs_confirmation(command: &str, safety_mode: &crate::config::SafetyMode) -> bool {
+    use crate::config::SafetyMode;
     match safety_mode {
-        "yolo" => false,
-        "auto" => {
+        SafetyMode::Yolo => false,
+        SafetyMode::Auto => {
             if is_destructive(command) {
                 return true;
             }
             !is_safe_command(command)
         }
-        // "confirm" or anything else — always confirm
-        _ => true,
+        SafetyMode::Confirm => true,
     }
 }
 
 /// Check if a command is "safe" enough to run in auto mode without confirmation.
 pub fn is_safe_command(command: &str) -> bool {
     let first_word = command.split_whitespace().next().unwrap_or("");
-    let safe_commands = [
-        "ls",
-        "pwd",
-        "echo",
-        "cat",
-        "head",
-        "tail",
-        "wc",
-        "which",
-        "where",
-        "whoami",
-        "date",
-        "cal",
-        "uptime",
-        "df",
-        "du",
-        "free",
-        "uname",
-        "git status",
-        "git log",
-        "git diff",
-        "git branch",
-        "cargo check",
-        "cargo test",
-        "cargo build",
-        "npm test",
-        "npm run",
-        "python --version",
-        "node --version",
-        "rustc --version",
-    ];
 
-    // Check full command match first
-    if safe_commands.iter().any(|s| command.starts_with(s)) {
+    // Single-word commands that are always safe regardless of arguments
+    let safe_any_args = [
+        "ls", "pwd", "echo", "cat", "head", "tail", "wc", "which", "where",
+        "whoami", "date", "cal", "uptime", "df", "du", "free", "uname",
+    ];
+    if safe_any_args.contains(&first_word) {
         return true;
     }
 
-    // Check first-word-only safe list
-    let safe_first = [
-        "ls", "pwd", "echo", "whoami", "date", "cal", "uptime", "which", "where",
+    // Multi-word prefixes that are safe (checked as prefix match)
+    let safe_prefixes = [
+        "git status", "git log", "git diff", "git branch",
+        "cargo check", "cargo test", "cargo build",
+        "npm test", "npm run",
+        "python --version", "node --version", "rustc --version",
     ];
-    safe_first.contains(&first_word)
+    safe_prefixes.iter().any(|s| command.starts_with(s))
 }
 
 /// Return the safety mode description for display.
-pub fn describe_mode(mode: &str) -> &str {
+pub fn describe_mode(mode: &crate::config::SafetyMode) -> &'static str {
+    use crate::config::SafetyMode;
     match mode {
-        "auto" => "auto (safe commands run without confirmation, destructive commands blocked)",
-        "yolo" => "yolo (no confirmations — live dangerously)",
-        _ => "confirm (always ask before running)",
+        SafetyMode::Auto => "auto (safe commands run without confirmation, destructive commands blocked)",
+        SafetyMode::Yolo => "yolo (no confirmations — live dangerously)",
+        SafetyMode::Confirm => "confirm (always ask before running)",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_destructive_commands() {
+        assert!(is_destructive("rm -rf /"));
+        assert!(is_destructive("rm -rf ~"));
+        assert!(is_destructive("dd if=/dev/zero of=/dev/sda"));
+        assert!(is_destructive("sudo rm -rf /"));
+        assert!(!is_destructive("rm file.txt"));
+        assert!(!is_destructive("ls -la"));
+    }
+
+    #[test]
+    fn test_safe_commands() {
+        assert!(is_safe_command("ls -la"));
+        assert!(is_safe_command("pwd"));
+        assert!(is_safe_command("git status"));
+        assert!(is_safe_command("cargo test --release"));
+        assert!(!is_safe_command("curl http://example.com"));
+        assert!(!is_safe_command("sudo apt install foo"));
+        assert!(!is_safe_command("git push"));
+    }
+
+    #[test]
+    fn test_ls_does_not_match_lsof() {
+        // Regression: old starts_with("ls") would match "lsof"
+        assert!(!is_safe_command("lsof -i :8080"));
+    }
+
+    #[test]
+    fn test_needs_confirmation_modes() {
+        use crate::config::SafetyMode;
+        assert!(!needs_confirmation("rm -rf /tmp/foo", &SafetyMode::Yolo));
+        assert!(needs_confirmation("rm -rf /tmp/foo", &SafetyMode::Confirm));
+        assert!(needs_confirmation("curl example.com", &SafetyMode::Auto));
+        assert!(!needs_confirmation("ls -la", &SafetyMode::Auto));
+        assert!(needs_confirmation("rm -rf /", &SafetyMode::Auto)); // destructive always blocked
+    }
+
+    #[test]
+    fn test_describe_mode() {
+        use crate::config::SafetyMode;
+        assert!(describe_mode(&SafetyMode::Auto).contains("auto"));
+        assert!(describe_mode(&SafetyMode::Yolo).contains("yolo"));
+        assert!(describe_mode(&SafetyMode::Confirm).contains("confirm"));
     }
 }

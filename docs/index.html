@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dude — the shell companion for really lazy people</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #1a1714;
+      --bg2: #211e19;
+      --surface: #2a2520;
+      --surface2: #332d27;
+      --border: #3d362e;
+      --border-light: #4a423a;
+      --cream: #ede8d0;
+      --cream-dim: #a89f8b;
+      --cream-faint: #706758;
+      --orange: #e8572a;
+      --orange-dim: #c44a22;
+      --sage: #7d9e82;
+      --sage-dim: #5a7a5f;
+      --sky: #6fa8c7;
+      --amber: #d4a843;
+      --red: #c74040;
+      --font-serif: 'Instrument Serif', Georgia, serif;
+      --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-mono);
+      background: var(--bg);
+      color: var(--cream);
+      line-height: 1.7;
+      overflow-x: hidden;
+      font-size: 14px;
+    }
+
+    /* warm paper grain */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    ::selection {
+      background: var(--orange);
+      color: var(--bg);
+    }
+
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; text-decoration-style: wavy; text-underline-offset: 3px; }
+
+    code {
+      background: var(--surface);
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 0.9em;
+      color: var(--amber);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       NAV
+    ═══════════════════════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(26, 23, 20, 0.85);
+      backdrop-filter: blur(12px) saturate(1.2);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 32px; height: 56px;
+    }
+    .nav-logo {
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      font-style: italic;
+      color: var(--cream);
+      letter-spacing: -0.02em;
+    }
+    .nav-links { display: flex; gap: 6px; align-items: center; }
+    .nav-links a {
+      color: var(--cream-dim); font-size: 12px;
+      padding: 6px 12px; border-radius: 4px;
+      transition: all 0.2s; font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .nav-links a:hover { color: var(--cream); background: var(--surface); text-decoration: none; }
+    .nav-gh {
+      display: inline-flex; align-items: center; gap: 5px;
+      border: 1px solid var(--border);
+      padding: 5px 12px; border-radius: 4px;
+      font-size: 12px; color: var(--cream-dim) !important;
+      margin-left: 8px; transition: all 0.2s;
+    }
+    .nav-gh:hover { border-color: var(--orange); color: var(--cream) !important; text-decoration: none !important; }
+    .nav-gh i { font-size: 14px; }
+
+    /* ═══════════════════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════════════════ */
+    .hero {
+      padding: 140px 32px 80px;
+      max-width: 1200px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .hero-text { position: relative; }
+    .hero-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--cream-faint);
+      margin-bottom: 24px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .hero-tag::before {
+      content: '';
+      width: 24px; height: 1px;
+      background: var(--cream-faint);
+    }
+    .hero h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(3.2rem, 5.5vw, 5rem);
+      font-weight: 400;
+      line-height: 1.0;
+      letter-spacing: -0.03em;
+      margin-bottom: 28px;
+      color: var(--cream);
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--orange);
+      position: relative;
+    }
+    .hero h1 em::after {
+      content: '';
+      position: absolute;
+      bottom: 2px; left: -2px; right: -2px;
+      height: 3px;
+      background: var(--orange);
+      opacity: 0.3;
+      border-radius: 2px;
+    }
+    .hero-sub {
+      font-size: 14px;
+      color: var(--cream-dim);
+      max-width: 420px;
+      line-height: 1.8;
+      margin-bottom: 40px;
+    }
+    .hero-actions {
+      display: flex; flex-direction: column; gap: 16px;
+      align-items: flex-start;
+    }
+    .curl-box {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 12px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+    }
+    .curl-box:hover { border-color: var(--orange); }
+    .curl-box code {
+      background: none; padding: 0;
+      color: var(--cream-dim); font-size: 13px;
+    }
+    .curl-box code .hl { color: var(--orange); }
+    .curl-box .copy-hint {
+      font-size: 10px;
+      color: var(--cream-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border: 1px solid var(--border);
+      padding: 3px 8px; border-radius: 3px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .curl-box:hover .copy-hint { border-color: var(--orange); color: var(--cream-dim); }
+    .hero-links {
+      display: flex; gap: 24px;
+      font-size: 13px;
+    }
+    .hero-links a {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--cream-dim);
+      transition: color 0.2s;
+    }
+    .hero-links a:hover { color: var(--orange); }
+    .hero-links a i { font-size: 15px; }
+
+    /* hero terminal */
+    .hero-terminal {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.2),
+        0 16px 56px rgba(0,0,0,0.4);
+      transform: rotate(0.5deg);
+      position: relative;
+    }
+    .hero-terminal::before {
+      content: '';
+      position: absolute; inset: -1px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, rgba(232,87,42,0.15), transparent 40%);
+      pointer-events: none;
+    }
+    .term-bar {
+      display: flex; align-items: center; gap: 7px;
+      padding: 11px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .term-dot.r { background: #c74040; }
+    .term-dot.y { background: #d4a843; }
+    .term-dot.g { background: #7d9e82; }
+    .term-title {
+      flex: 1; text-align: center;
+      font-size: 11px; color: var(--cream-faint);
+    }
+    .term-body {
+      padding: 20px;
+      font-size: 13px;
+      line-height: 1.9;
+      min-height: 220px;
+    }
+    .term-body .line {
+      opacity: 0;
+      animation: lineIn 0.25s ease-out forwards;
+    }
+    @keyframes lineIn {
+      from { opacity: 0; transform: translateX(-4px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .t-prompt { color: var(--sage); }
+    .t-cmd { color: var(--cream); }
+    .t-dude { color: var(--orange); font-weight: 600; }
+    .t-dim { color: var(--cream-dim); }
+    .t-hl { color: var(--sky); }
+    .t-err { color: var(--red); }
+    .t-warn { color: var(--amber); }
+
+    /* ═══════════════════════════════════════════════════
+       ASCII DIVIDER
+    ═══════════════════════════════════════════════════ */
+    .divider {
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 32px;
+      color: var(--border);
+      font-size: 12px;
+      overflow: hidden;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       FEATURES — editorial scroll, not card grid
+    ═══════════════════════════════════════════════════ */
+    .features {
+      max-width: 1200px; margin: 0 auto;
+      padding: 100px 32px;
+    }
+    .features-header {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 40px;
+      margin-bottom: 80px;
+      align-items: end;
+    }
+    .section-num {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--cream-faint);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .features-header h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 4vw, 3.5rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+    }
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .feature-row {
+      display: grid;
+      grid-template-columns: 200px 1fr 1.2fr;
+      gap: 40px;
+      padding: 36px 0;
+      border-top: 1px solid var(--border);
+      align-items: baseline;
+      transition: background 0.3s;
+    }
+    .feature-row:last-child { border-bottom: 1px solid var(--border); }
+    .feature-row:hover { background: rgba(232, 87, 42, 0.03); }
+    .feature-num {
+      font-size: 48px;
+      font-family: var(--font-serif);
+      font-style: italic;
+      color: var(--border-light);
+      line-height: 1;
+      transition: color 0.3s;
+    }
+    .feature-row:hover .feature-num { color: var(--orange); }
+    .feature-name h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .feature-name .tag {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--sage);
+    }
+    .feature-desc {
+      color: var(--cream-dim);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       SAFETY — big dramatic callout
+    ═══════════════════════════════════════════════════ */
+    .safety {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 100px 32px;
+    }
+    .safety-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+    .safety-text .section-num { margin-bottom: 24px; }
+    .safety-text h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 4vw, 3.5rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      margin-bottom: 24px;
+    }
+    .safety-text h2 .strike {
+      text-decoration: line-through;
+      text-decoration-color: var(--red);
+      text-decoration-thickness: 3px;
+      color: var(--cream-dim);
+    }
+    .safety-text > p {
+      color: var(--cream-dim);
+      font-size: 13px;
+      line-height: 1.8;
+      margin-bottom: 36px;
+      max-width: 460px;
+    }
+    .safety-modes {
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .safety-mode {
+      display: flex; gap: 14px;
+      align-items: flex-start;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .safety-mode .mode-icon {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 15px;
+    }
+    .mode-icon.blocked { background: rgba(199,64,64,0.15); color: var(--red); }
+    .mode-icon.confirm { background: rgba(125,158,130,0.15); color: var(--sage); }
+    .mode-icon.auto    { background: rgba(212,168,67,0.15); color: var(--amber); }
+    .mode-icon.yolo    { background: rgba(232,87,42,0.15); color: var(--orange); }
+    .safety-mode strong { color: var(--cream); }
+    .safety-mode span { color: var(--cream-dim); }
+
+    .safety-demo-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    .safety-demo-box .term-bar { background: var(--surface); }
+    .safety-demo-body {
+      padding: 24px;
+      font-size: 13px;
+      line-height: 2;
+    }
+    .blink {
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* ═══════════════════════════════════════════════════
+       PROVIDERS — side by side, asymmetric
+    ═══════════════════════════════════════════════════ */
+    .providers {
+      max-width: 1200px; margin: 0 auto;
+      padding: 100px 32px;
+    }
+    .providers-header {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 40px;
+      margin-bottom: 60px;
+      align-items: end;
+    }
+    .providers-header h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 4vw, 3.5rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+    }
+    .provider-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .prov-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .prov-card:hover { border-color: var(--orange); }
+    .prov-head {
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .prov-head .prov-tag {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 12px;
+    }
+    .prov-tag.local { color: var(--sage); }
+    .prov-tag.cloud { color: var(--sky); }
+    .prov-head h3 {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 400;
+      margin-bottom: 6px;
+    }
+    .prov-head p {
+      font-size: 13px;
+      color: var(--cream-dim);
+    }
+    .prov-code {
+      padding: 20px 24px;
+      background: var(--bg);
+      font-size: 12px;
+      line-height: 2;
+      color: var(--cream-dim);
+    }
+    .prov-code .p { color: var(--sage); }
+    .prov-code .c { color: var(--cream-faint); font-style: italic; }
+
+    /* ═══════════════════════════════════════════════════
+       OPEN SOURCE — manifesto style
+    ═══════════════════════════════════════════════════ */
+    .oss {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 100px 32px;
+    }
+    .oss-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+    .oss-text h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 4vw, 3.5rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      margin-bottom: 20px;
+    }
+    .oss-text h2 em { font-style: italic; color: var(--orange); }
+    .oss-text p {
+      color: var(--cream-dim);
+      font-size: 13px;
+      line-height: 1.8;
+      max-width: 420px;
+      margin-bottom: 32px;
+    }
+    .oss-text .oss-link {
+      display: inline-flex; align-items: center; gap: 8px;
+      color: var(--orange); font-size: 13px; font-weight: 600;
+    }
+    .oss-text .oss-link i { font-size: 16px; }
+    .oss-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    .oss-stat {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px;
+      transition: border-color 0.3s;
+    }
+    .oss-stat:hover { border-color: var(--orange); }
+    .oss-stat .val {
+      font-family: var(--font-serif);
+      font-size: 2.4rem;
+      color: var(--cream);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .oss-stat .lbl {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--cream-faint);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       INSTALL — bottom CTA
+    ═══════════════════════════════════════════════════ */
+    .install-section {
+      max-width: 1200px; margin: 0 auto;
+      padding: 100px 32px 120px;
+      text-align: center;
+    }
+    .install-section h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 3.5vw, 3rem);
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+    .install-section > p {
+      color: var(--cream-dim);
+      font-size: 13px;
+      margin-bottom: 36px;
+    }
+    .install-box {
+      display: inline-flex; align-items: center; gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 24px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      font-size: 13px;
+    }
+    .install-box:hover { border-color: var(--orange); }
+    .install-box code {
+      background: none; padding: 0;
+      color: var(--cream-dim);
+    }
+    .install-box code .hl { color: var(--orange); }
+    .install-box .copy-hint {
+      font-size: 10px;
+      color: var(--cream-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border: 1px solid var(--border);
+      padding: 3px 8px; border-radius: 3px;
+    }
+    .shell-support {
+      display: flex; gap: 20px; justify-content: center;
+      margin-top: 20px;
+    }
+    .shell-support span {
+      font-size: 11px;
+      color: var(--cream-faint);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .shell-support .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--sage);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════════════ */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px;
+    }
+    .footer-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer-left {
+      font-size: 12px; color: var(--cream-faint);
+    }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a {
+      font-size: 12px; color: var(--cream-faint);
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--cream); text-decoration: none; }
+
+    /* ═══════════════════════════════════════════════════
+       SCROLL REVEAL
+    ═══════════════════════════════════════════════════ */
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-stagger > * {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-stagger.visible > * {
+      opacity: 1; transform: translateY(0);
+    }
+    .reveal-stagger.visible > *:nth-child(1) { transition-delay: 0ms; }
+    .reveal-stagger.visible > *:nth-child(2) { transition-delay: 80ms; }
+    .reveal-stagger.visible > *:nth-child(3) { transition-delay: 160ms; }
+    .reveal-stagger.visible > *:nth-child(4) { transition-delay: 240ms; }
+    .reveal-stagger.visible > *:nth-child(5) { transition-delay: 320ms; }
+    .reveal-stagger.visible > *:nth-child(6) { transition-delay: 400ms; }
+
+    /* ═══════════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+        gap: 48px;
+        min-height: auto;
+        padding: 120px 24px 60px;
+      }
+      .hero-terminal { transform: none; }
+      .features-header,
+      .providers-header { grid-template-columns: 1fr; gap: 16px; }
+      .feature-row {
+        grid-template-columns: 48px 1fr;
+        gap: 16px;
+      }
+      .feature-desc { grid-column: 1 / -1; }
+      .safety-inner { grid-template-columns: 1fr; gap: 48px; }
+      .provider-cols { grid-template-columns: 1fr; }
+      .oss-inner { grid-template-columns: 1fr; gap: 48px; }
+      .oss-stats { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .nav-links a:not(.nav-gh) { display: none; }
+      .hero { padding: 110px 20px 48px; }
+      .features, .providers, .install-section { padding-left: 20px; padding-right: 20px; }
+      .safety, .oss { padding-left: 20px; padding-right: 20px; }
+      .feature-row { grid-template-columns: 1fr; }
+      .feature-num { font-size: 32px; }
+      .oss-stats { grid-template-columns: 1fr; }
+      .curl-box code { font-size: 11px; }
+      .install-box { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════ NAV ════════ -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">dude</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#safety">Safety</a>
+      <a href="#providers">Providers</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/buzzer-re/dude" class="nav-gh" target="_blank">
+        <i class="icon-github"></i> Source
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ════════ HERO ════════ -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-tag">Shell companion v0.1</div>
+    <h1>You type wrong.<br><em>Dude fixes it.</em></h1>
+    <p class="hero-sub">
+      For the really lazy. Or the ones who've been awake
+      so long they can't remember how to spell <code>status</code>.
+      Catches your typos, answers your questions,
+      and remembers so it never has to ask twice.
+      All locally. No cloud unless you want it.
+    </p>
+    <div class="hero-actions">
+      <div class="curl-box" onclick="copyCurl()">
+        <code>$ curl -fsSL <span class="hl">https://raw.githubusercontent.com/buzzer-re/dude/main/install.sh</span> | bash</code>
+        <span class="copy-hint" id="curl-hint">copy</span>
+      </div>
+      <div class="hero-links">
+        <a href="https://github.com/buzzer-re/dude" target="_blank">
+          <i class="icon-github"></i> View source
+        </a>
+        <a href="#features">
+          <i class="icon-arrow-down"></i> How it works
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-terminal">
+    <div class="term-bar">
+      <div class="term-dot r"></div>
+      <div class="term-dot y"></div>
+      <div class="term-dot g"></div>
+      <div class="term-title">~/ &mdash; zsh</div>
+      <div style="width: 44px"></div>
+    </div>
+    <div class="term-body" id="term-body"></div>
+    <video autoplay loop muted playsinline style="width:100%;display:block;border-top:1px solid var(--border)">
+      <source src="https://github.com/buzzer-re/dude/raw/main/demo/demo.mp4" type="video/mp4">
+    </video>
+  </div>
+</section>
+
+<!-- ════════ DIVIDER ════════ -->
+<div class="divider" aria-hidden="true"></div>
+
+<!-- ════════ FEATURES ════════ -->
+<section class="features reveal" id="features">
+  <div class="features-header">
+    <div class="section-num">01 &mdash; Features</div>
+    <h2>Everything you need.<br>Nothing you don't.</h2>
+  </div>
+
+  <div class="feature-list reveal-stagger">
+    <div class="feature-row">
+      <div class="feature-num">1</div>
+      <div class="feature-name">
+        <h3>Typo Catcher</h3>
+        <div class="tag">Zero-latency after learning</div>
+      </div>
+      <div class="feature-desc">
+        Type <code>gti stauts</code> and dude suggests <code>git status</code>.
+        After 3 corrections it stops asking the LLM entirely &mdash;
+        instant recall from a local SQLite database.
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-num">2</div>
+      <div class="feature-name">
+        <h3>Ask Anything</h3>
+        <div class="tag">? prefix queries</div>
+      </div>
+      <div class="feature-desc">
+        Prefix any question with <code>?</code> in your shell.
+        &ldquo;? how do I tar without compression&rdquo; and dude gives you the command.
+        No googling. Follow-ups work too &mdash; 15-minute session memory.
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-num">3</div>
+      <div class="feature-name">
+        <h3>Pipe Anything</h3>
+        <div class="tag">stdin analysis</div>
+      </div>
+      <div class="feature-desc">
+        Feed it logs, kubectl output, or error messages.
+        <code>cat crash.log | dude "wtf happened to gpu"</code>
+        and get an actual diagnosis, not a man page.
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-num">4</div>
+      <div class="feature-name">
+        <h3>Learns Your Habits</h3>
+        <div class="tag">Personalized suggestions</div>
+      </div>
+      <div class="feature-desc">
+        Analyzes your shell history to understand your tools, directories, and style.
+        Suggestions are personalized, not generic Stack Overflow pastes.
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-num">5</div>
+      <div class="feature-name">
+        <h3>Secret Filtering</h3>
+        <div class="tag">Privacy by default</div>
+      </div>
+      <div class="feature-desc">
+        Environment variables containing KEY, TOKEN, SECRET, or PASSWORD are
+        automatically redacted before anything is sent to the LLM.
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-num">6</div>
+      <div class="feature-name">
+        <h3>Full Transparency</h3>
+        <div class="tag">No hidden data</div>
+      </div>
+      <div class="feature-desc">
+        Run <code>dude context "your query"</code> to see exactly what gets sent to the LLM.
+        System prompt, user context, history, session. Inspect everything.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ SAFETY ════════ -->
+<section class="safety" id="safety">
+  <div class="safety-inner">
+    <div class="safety-text reveal">
+      <div class="section-num">02 &mdash; Safety</div>
+      <h2>Before you hit Enter,<br>read what it says.</h2>
+      <p>
+        Dude suggests commands, not runs them behind your back.
+        You always see what's about to execute. Three safety modes
+        let you decide how much hand-holding you want &mdash; and even in
+        &ldquo;yolo&rdquo; mode, the truly terrifying stuff is always blocked.
+      </p>
+      <div class="safety-modes">
+        <div class="safety-mode">
+          <div class="mode-icon blocked"><i class="icon-octagon-x"></i></div>
+          <span><strong>Always blocked</strong> &mdash; <code>rm -rf /</code>, <code>dd if=/dev/zero</code>, and friends. Every mode. No exceptions.</span>
+        </div>
+        <div class="safety-mode">
+          <div class="mode-icon confirm"><i class="icon-shield-check"></i></div>
+          <span><strong>Confirm</strong> (default) &mdash; asks before every command. If you're paranoid, good. So are we.</span>
+        </div>
+        <div class="safety-mode">
+          <div class="mode-icon auto"><i class="icon-zap"></i></div>
+          <span><strong>Auto</strong> &mdash; safe commands run instantly (<code>ls</code>, <code>git status</code>). Everything else asks.</span>
+        </div>
+        <div class="safety-mode">
+          <div class="mode-icon yolo"><i class="icon-flame"></i></div>
+          <span><strong>YOLO</strong> &mdash; never asks. But destructive commands are still blocked, because we care about you even if you don't.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="safety-demo-box reveal">
+      <div class="term-bar">
+        <div class="term-dot r"></div>
+        <div class="term-dot y"></div>
+        <div class="term-dot g"></div>
+        <div class="term-title">safety demo</div>
+        <div style="width: 44px"></div>
+      </div>
+      <div class="safety-demo-body">
+        <div><span class="t-prompt">$</span> <span class="t-cmd">rm -rf /</span></div>
+        <div><span class="t-dude">dude:</span> <span class="t-err">Nope. Blocked.</span></div>
+        <div class="t-dim">&nbsp; This command would destroy your</div>
+        <div class="t-dim">&nbsp; entire filesystem. Not even</div>
+        <div class="t-dim">&nbsp; in yolo mode.</div>
+        <br>
+        <div><span class="t-prompt">$</span> <span class="t-cmd">gti push --forc</span></div>
+        <div><span class="t-dude">dude:</span> <span class="t-hl">git push --force</span></div>
+        <div class="t-dim">&nbsp; run it? [Enter/n] <span class="t-warn blink">_</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ PROVIDERS ════════ -->
+<section class="providers reveal" id="providers">
+  <div class="providers-header">
+    <div class="section-num">03 &mdash; Providers</div>
+    <h2>Your models.<br>Your machine.</h2>
+  </div>
+
+  <div class="provider-cols">
+    <div class="prov-card">
+      <div class="prov-head">
+        <div class="prov-tag local">Local &middot; Free &middot; Private</div>
+        <h3>Ollama</h3>
+        <p>Local models, no network, no cost. Your data never leaves your machine.</p>
+      </div>
+      <div class="prov-code">
+        <div><span class="p">$</span> brew install ollama</div>
+        <div><span class="p">$</span> ollama pull qwen2.5-coder:1.5b</div>
+        <div><span class="p">$</span> dude provider ollama</div>
+      </div>
+    </div>
+
+    <div class="prov-card">
+      <div class="prov-head">
+        <div class="prov-tag cloud">Cloud &middot; Smart &middot; Fast</div>
+        <h3>Claude</h3>
+        <p>For when you need serious brainpower. Auto-reads your Claude Code OAuth token.</p>
+      </div>
+      <div class="prov-code">
+        <div><span class="p">$</span> dude provider claude</div>
+        <div class="c"># or with API key:</div>
+        <div><span class="p">$</span> export ANTHROPIC_API_KEY="sk-ant-..."</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ OPEN SOURCE ════════ -->
+<section class="oss" id="opensource">
+  <div class="oss-inner">
+    <div class="oss-text reveal">
+      <div class="section-num">04 &mdash; Open source</div>
+      <h2>Read every<br>line of <em>it.</em></h2>
+      <p>
+        MIT licensed. No accounts, no tracking,
+        no &ldquo;free tier&rdquo; with strings attached.
+        Fork it. Break it. Fix it. Ship your own version.
+        We genuinely do not care.
+      </p>
+      <a href="https://github.com/buzzer-re/dude" class="oss-link" target="_blank">
+        <i class="icon-github"></i> Browse the source
+      </a>
+    </div>
+
+    <div class="oss-stats reveal-stagger">
+      <div class="oss-stat">
+        <div class="val">Rust</div>
+        <div class="lbl">Written in</div>
+      </div>
+      <div class="oss-stat">
+        <div class="val">MIT</div>
+        <div class="lbl">License</div>
+      </div>
+      <div class="oss-stat">
+        <div class="val">~0ms</div>
+        <div class="lbl">Local lookup</div>
+      </div>
+      <div class="oss-stat">
+        <div class="val">3</div>
+        <div class="lbl">Shells</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ INSTALL ════════ -->
+<section class="install-section reveal" id="install">
+  <h2>Ready to stop trying?</h2>
+  <p>One command. Even you can handle that.</p>
+  <div class="install-box" onclick="copyCurl()">
+    <code>curl -fsSL <span class="hl">https://raw.githubusercontent.com/buzzer-re/dude/main/install.sh</span> | bash</code>
+    <span class="copy-hint" id="install-hint">copy</span>
+  </div>
+  <div class="shell-support">
+    <span><span class="dot"></span> zsh</span>
+    <span><span class="dot"></span> bash</span>
+    <span><span class="dot"></span> fish</span>
+  </div>
+</section>
+
+<!-- ════════ FOOTER ════════ -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">dude &mdash; built for lazy people, by lazy people</div>
+    <div class="footer-links">
+      <a href="https://github.com/buzzer-re/dude" target="_blank">GitHub</a>
+      <a href="https://github.com/buzzer-re/dude/issues" target="_blank">Issues</a>
+      <a href="https://github.com/buzzer-re/dude/blob/main/LICENSE" target="_blank">MIT</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ─── Terminal scenes ───
+  const scenes = [
+    [
+      { text: '<span class="t-prompt">$</span> <span class="t-cmd">gti stauts</span>', delay: 0 },
+      { text: '<span class="t-err">zsh: command not found: gti</span>', delay: 500 },
+      { text: '<span class="t-dude">dude:</span> <span class="t-hl">git status</span>', delay: 900 },
+      { text: '<span class="t-dim">&nbsp; run it? [Enter/n]</span>', delay: 1200 },
+    ],
+    [
+      { text: '<span class="t-prompt">$</span> <span class="t-cmd">? find files larger than 100mb</span>', delay: 0 },
+      { text: '<span class="t-dude">dude:</span> <span class="t-hl">find . -size +100M -type f</span>', delay: 700 },
+      { text: '<span class="t-dim">&nbsp; run it? [Enter/n]</span>', delay: 1000 },
+    ],
+    [
+      { text: '<span class="t-prompt">$</span> <span class="t-cmd">cat crash.log | dude "wtf happened to gpu"</span>', delay: 0 },
+      { text: '<span class="t-dude">dude:</span>', delay: 700 },
+      { text: '<span class="t-dim">&nbsp; GPU 0 (RTX 4090) hit thermal throttle at 97&deg;C</span>', delay: 1000 },
+      { text: '<span class="t-dim">&nbsp; and fell off the PCIe bus at 14:32:07.</span>', delay: 1300 },
+      { text: '<span class="t-dim">&nbsp; VRAM ECC errors spiking since 14:30 &mdash; likely</span>', delay: 1600 },
+      { text: '<span class="t-dim">&nbsp; your training job OOM&rsquo;d and the driver panicked.</span>', delay: 1900 },
+      { text: '<span class="t-dim">&nbsp; Check fan RPM and try <span class="t-hl">nvidia-smi -r</span> to reset.</span>', delay: 2200 },
+    ],
+    [
+      { text: '<span class="t-prompt">$</span> <span class="t-cmd">dude "kill process on port 3000"</span>', delay: 0 },
+      { text: '<span class="t-dude">dude:</span> <span class="t-hl">lsof -ti:3000 | xargs kill -9</span>', delay: 700 },
+      { text: '<span class="t-dim">&nbsp; run it? [Enter/n]</span>', delay: 1000 },
+    ],
+  ];
+
+  let sceneIdx = 0;
+  const termBody = document.getElementById('term-body');
+
+  function playScene(scene) {
+    termBody.innerHTML = '';
+    scene.forEach((line) => {
+      setTimeout(() => {
+        const div = document.createElement('div');
+        div.className = 'line';
+        div.innerHTML = line.text;
+        termBody.appendChild(div);
+      }, line.delay);
+    });
+  }
+
+  function nextScene() {
+    playScene(scenes[sceneIdx]);
+    sceneIdx = (sceneIdx + 1) % scenes.length;
+  }
+  nextScene();
+  setInterval(nextScene, 5500);
+
+  // ─── ASCII divider ───
+  const divEl = document.querySelector('.divider');
+  if (divEl) {
+    const w = Math.ceil(window.innerWidth / 8);
+    divEl.textContent = Array(w).fill('\u2500').join('');
+  }
+
+  // ─── Scroll reveal ───
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => obs.observe(el));
+
+  // ─── Copy helpers ───
+  function copyCurl() {
+    navigator.clipboard.writeText('curl -fsSL https://raw.githubusercontent.com/buzzer-re/dude/main/install.sh | bash');
+    const h = document.getElementById('curl-hint');
+    h.textContent = 'copied'; setTimeout(() => h.textContent = 'copy', 2000);
+  }
+</script>
+
+</body>
+</html>

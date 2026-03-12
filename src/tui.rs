@@ -54,14 +54,12 @@ fn build_fields() -> Vec<ConfigField> {
                     ("ollama", "Local LLM via ollama"),
                     ("claude", "Anthropic Claude API"),
                 ],
-                get: |c| {
-                    if c.provider.is_empty() {
-                        "ollama".into()
-                    } else {
-                        c.provider.clone()
+                get: |c| c.provider.to_string(),
+                set: |c, v| {
+                    if let Some(p) = crate::config::Provider::from_str_lenient(&v) {
+                        c.provider = p;
                     }
                 },
-                set: |c, v| c.provider = v,
             },
         },
         ConfigField {
@@ -77,13 +75,7 @@ fn build_fields() -> Vec<ConfigField> {
                     ("qwen3.5:2b", "Reasoning model (slower)"),
                     ("gemma3:4b", "Google's compact model"),
                 ],
-                get: |c| {
-                    if c.model.is_empty() || c.model.starts_with("claude") {
-                        String::new()
-                    } else {
-                        c.model.clone()
-                    }
-                },
+                get: |c| c.model.clone(),
                 set: |c, v| c.model = v,
             },
         },
@@ -107,8 +99,12 @@ fn build_fields() -> Vec<ConfigField> {
                     ("auto", "Safe commands auto-run, others ask"),
                     ("yolo", "Never ask — live dangerously"),
                 ],
-                get: |c| c.safety_mode.clone(),
-                set: |c, v| c.safety_mode = v,
+                get: |c| c.safety_mode.to_string(),
+                set: |c, v| {
+                    if let Ok(m) = serde_json::from_value(serde_json::Value::String(v)) {
+                        c.safety_mode = m;
+                    }
+                },
             },
         },
         ConfigField {
@@ -149,19 +145,9 @@ fn build_fields() -> Vec<ConfigField> {
         ConfigField {
             label: "Claude Auth",
             kind: FieldKind::ReadOnly {
-                get: |c| {
-                    if c.claude_api_key
-                        .as_deref()
-                        .map(|k| !k.is_empty())
-                        .unwrap_or(false)
-                    {
-                        "API key (from config)".into()
-                    } else if claude::check_available(c) {
-                        "OAuth (from macOS Keychain)".into()
-                    } else {
-                        "Not configured".into()
-                    }
-                },
+                // Note: actual value comes from App::claude_auth_cached to avoid
+                // spawning a subprocess on every draw frame. This is a placeholder.
+                get: |_c| "checking...".into(),
             },
         },
     ]
@@ -186,20 +172,38 @@ struct App {
     main_cursor: usize,
     mode: Mode,
     dirty: bool,
+    claude_auth_cached: String,
 }
 
 impl App {
     fn new(config: Config) -> Self {
+        let claude_auth_cached = if config
+            .claude_api_key
+            .as_deref()
+            .map(|k| !k.is_empty())
+            .unwrap_or(false)
+        {
+            "API key (from config)".into()
+        } else if claude::check_available(&config) {
+            "OAuth (from macOS Keychain)".into()
+        } else {
+            "Not configured".into()
+        };
         Self {
             config,
             fields: build_fields(),
             main_cursor: 0,
             mode: Mode::Main,
             dirty: false,
+            claude_auth_cached,
         }
     }
 
     fn current_value(&self, idx: usize) -> String {
+        // Use cached auth status to avoid subprocess on every draw
+        if self.fields[idx].label == "Claude Auth" {
+            return self.claude_auth_cached.clone();
+        }
         match &self.fields[idx].kind {
             FieldKind::Select { get, .. } => get(&self.config),
             FieldKind::Text { get, .. } => get(&self.config),

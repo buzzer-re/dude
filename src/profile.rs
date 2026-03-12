@@ -1,4 +1,4 @@
-use crate::config::profile_path;
+use crate::config::{profile_path, save_toml};
 use crate::history;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -36,13 +36,7 @@ impl Profile {
     }
 
     pub fn save(&self) {
-        let path = profile_path();
-        if let Some(parent) = path.parent() {
-            let _ = fs::create_dir_all(parent);
-        }
-        if let Ok(content) = toml::to_string_pretty(self) {
-            let _ = fs::write(path, content);
-        }
+        save_toml(&profile_path(), self);
     }
 
     pub fn analyze_and_build() -> Self {
@@ -132,12 +126,10 @@ fn analyze_history(entries: &[String]) -> (Vec<String>, Vec<String>, Vec<String>
         }
 
         // Extract directories from cd commands
-        if entry.starts_with("cd ") {
-            if let Some(dir) = entry.strip_prefix("cd ") {
-                let dir = dir.trim().to_string();
-                if !dir.is_empty() && dir != "-" {
-                    *dir_counts.entry(dir).or_default() += 1;
-                }
+        if let Some(dir) = entry.strip_prefix("cd ") {
+            let dir = dir.trim().to_string();
+            if !dir.is_empty() && dir != "-" {
+                *dir_counts.entry(dir).or_default() += 1;
             }
         }
     }
@@ -161,6 +153,74 @@ fn analyze_history(entries: &[String]) -> (Vec<String>, Vec<String>, Vec<String>
         .collect();
 
     (top_commands, common_dirs, tools)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_analyze_history_extracts_commands() {
+        let entries = vec![
+            "git status".into(),
+            "git commit -m test".into(),
+            "cargo test".into(),
+            "ls -la".into(),
+            "git push".into(),
+        ];
+        let (top_cmds, _, tools) = analyze_history(&entries);
+        assert!(top_cmds.contains(&"git".to_string()));
+        assert!(top_cmds.contains(&"cargo".to_string()));
+        assert!(tools.contains(&"git".to_string()));
+        assert!(tools.contains(&"cargo".to_string()));
+    }
+
+    #[test]
+    fn test_analyze_history_extracts_dirs() {
+        let entries = vec![
+            "cd /tmp".into(),
+            "cd ~/projects".into(),
+            "cd /tmp".into(),
+        ];
+        let (_, dirs, _) = analyze_history(&entries);
+        assert!(dirs.contains(&"/tmp".to_string()));
+        assert!(dirs.contains(&"~/projects".to_string()));
+    }
+
+    #[test]
+    fn test_analyze_history_empty() {
+        let (cmds, dirs, tools) = analyze_history(&[]);
+        assert!(cmds.is_empty());
+        assert!(dirs.is_empty());
+        assert!(tools.is_empty());
+    }
+
+    #[test]
+    fn test_as_context_string() {
+        let profile = Profile {
+            user: UserInfo {
+                name: "tester".into(),
+                shell: "zsh".into(),
+                os: "macos".into(),
+                common_tools: vec!["git".into()],
+            },
+            patterns: Patterns {
+                typical_directories: vec![],
+                top_commands: vec!["git".into(), "ls".into()],
+            },
+        };
+        let ctx = profile.as_context_string();
+        assert!(ctx.contains("tester"));
+        assert!(ctx.contains("macos"));
+        assert!(ctx.contains("git"));
+    }
+
+    #[test]
+    fn test_profile_default() {
+        let profile = Profile::default();
+        assert!(profile.user.name.is_empty());
+        assert!(profile.patterns.top_commands.is_empty());
+    }
 }
 
 pub fn display_profile(profile: &Profile) {
@@ -196,16 +256,10 @@ pub fn display_profile(profile: &Profile) {
         );
     }
 
-    let db_path = crate::config::db_path();
-    if db_path.exists() {
-        if let Ok(conn) = rusqlite::Connection::open(&db_path) {
-            if let Ok(count) = conn.query_row("SELECT COUNT(*) FROM corrections", [], |row| {
-                row.get::<_, i64>(0)
-            }) {
-                if count > 0 {
-                    println!("  {} {}", "Learned corrections:".dimmed(), count);
-                }
-            }
+    if let Ok(corrections) = crate::corrections::Corrections::open() {
+        let count = corrections.count();
+        if count > 0 {
+            println!("  {} {}", "Learned corrections:".dimmed(), count);
         }
     }
 }

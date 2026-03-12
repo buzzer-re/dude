@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 
-use crate::config;
-
 const SESSION_TTL_SECS: i64 = 900; // 15 minutes
 const MAX_SESSION_ENTRIES: usize = 10;
 
@@ -14,13 +12,9 @@ pub struct SessionEntry {
     pub content: String,
 }
 
-pub fn session_path() -> std::path::PathBuf {
-    config::dude_dir().join("session.jsonl")
-}
-
 /// Load recent session entries, filtering out expired ones.
 pub fn load_session() -> Vec<SessionEntry> {
-    let path = session_path();
+    let path = crate::config::session_path();
     if !path.exists() {
         return Vec::new();
     }
@@ -53,7 +47,7 @@ pub fn load_session() -> Vec<SessionEntry> {
 
 /// Append a user+assistant exchange to the session file.
 pub fn save_exchange(question: &str, response: &str) {
-    let path = session_path();
+    let path = crate::config::session_path();
     if let Some(parent) = path.parent() {
         let _ = fs::create_dir_all(parent);
     }
@@ -71,10 +65,15 @@ pub fn save_exchange(question: &str, response: &str) {
         content: response.to_string(),
     };
 
-    // Load existing (prunes expired), add new, rewrite
+    // Load existing (prunes expired), add new, enforce cap, rewrite
     let mut entries = load_session();
     entries.push(user_entry);
     entries.push(assistant_entry);
+
+    // Enforce the cap on write, not just on load
+    if entries.len() > MAX_SESSION_ENTRIES {
+        entries = entries[entries.len() - MAX_SESSION_ENTRIES..].to_vec();
+    }
 
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
@@ -92,7 +91,7 @@ pub fn save_exchange(question: &str, response: &str) {
 
 /// Clear the session.
 pub fn clear_session() {
-    let path = session_path();
+    let path = crate::config::session_path();
     let _ = fs::remove_file(path);
 }
 
@@ -105,12 +104,39 @@ pub fn session_context_string() -> String {
 
     let mut ctx = String::from("\nRecent conversation:\n");
     for entry in &entries {
-        let prefix = if entry.role == "user" {
-            "User asked"
-        } else {
-            "You replied"
+        let prefix = match entry.role.as_str() {
+            "user" => "User asked",
+            _ => "You replied",
         };
         ctx.push_str(&format!("  {}: {}\n", prefix, entry.content));
     }
     ctx
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_session_entry_serialization() {
+        let entry = SessionEntry {
+            timestamp: "2026-01-01T00:00:00+00:00".into(),
+            role: "user".into(),
+            content: "how do I list files".into(),
+        };
+        let json = serde_json::to_string(&entry).unwrap();
+        let parsed: SessionEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.role, "user");
+        assert_eq!(parsed.content, "how do I list files");
+    }
+
+    #[test]
+    fn test_session_ttl_constant() {
+        assert_eq!(SESSION_TTL_SECS, 900);
+    }
+
+    #[test]
+    fn test_max_session_entries_constant() {
+        assert_eq!(MAX_SESSION_ENTRIES, 10);
+    }
 }

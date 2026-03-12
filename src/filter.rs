@@ -77,4 +77,51 @@ mod tests {
         let result = redact_secrets(input);
         assert_eq!(result, input);
     }
+
+    #[test]
+    fn test_redact_export_prefix() {
+        let input = "export ANTHROPIC_API_KEY=sk-ant-test123";
+        let result = redact_secrets(input);
+        assert!(result.contains("[REDACTED]"));
+        assert!(!result.contains("sk-ant-test123"));
+    }
+
+    #[test]
+    fn test_redact_password_variants() {
+        for var in ["DB_PASSWORD", "PASSWD", "MY_CREDENTIAL", "PRIVATE_KEY"] {
+            let input = format!("{}=secret_value", var);
+            let result = redact_secrets(&input);
+            assert!(
+                result.contains("[REDACTED]"),
+                "{} should be redacted",
+                var
+            );
+        }
+    }
+
+    #[test]
+    fn test_no_equals_not_redacted() {
+        let input = "SECRET_KEY is very important";
+        let result = redact_secrets(input);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn test_empty_input() {
+        assert_eq!(redact_secrets(""), "");
+    }
+
+    #[test]
+    fn test_preserves_trailing_newline() {
+        let input = "KEY=val\n";
+        let result = redact_secrets(input);
+        assert!(result.ends_with('\n'));
+    }
+
+    #[test]
+    fn test_no_trailing_newline_preserved() {
+        let input = "PATH=/usr/bin";
+        let result = redact_secrets(input);
+        assert!(!result.ends_with('\n'));
+    }
 }
