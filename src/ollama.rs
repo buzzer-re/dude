@@ -31,13 +31,14 @@ pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<
         .build()
         .map_err(|e| format!("HTTP client error: {e}"))?;
 
+    let model = config.effective_model();
+
     // Reasoning models burn tokens on <think> tags. Give them more budget.
-    let is_reasoning_model = config.model.starts_with("qwen3")
-        || config.model.contains("deepseek-r1");
+    let is_reasoning_model = model.starts_with("qwen3") || model.contains("deepseek-r1");
     let token_budget = if is_reasoning_model { 1000 } else { 300 };
 
     let request = OllamaRequest {
-        model: config.model.clone(),
+        model: model.to_string(),
         prompt: user_prompt.to_string(),
         system: system_prompt.to_string(),
         stream: false,
@@ -47,21 +48,17 @@ pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<
         },
     };
 
-    let url = format!("{}/api/generate", config.ollama_url);
+    let url = format!("{}/api/generate", config.effective_ollama_url());
 
-    let resp = client
-        .post(&url)
-        .json(&request)
-        .send()
-        .map_err(|e| {
-            if e.is_connect() {
-                "dude: can't reach ollama. is it running? try: ollama serve".to_string()
-            } else if e.is_timeout() {
-                "dude: ollama took too long to respond".to_string()
-            } else {
-                format!("dude: ollama error: {e}")
-            }
-        })?;
+    let resp = client.post(&url).json(&request).send().map_err(|e| {
+        if e.is_connect() {
+            "dude: can't reach ollama. is it running? try: ollama serve".to_string()
+        } else if e.is_timeout() {
+            "dude: ollama took too long to respond".to_string()
+        } else {
+            format!("dude: ollama error: {e}")
+        }
+    })?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -126,7 +123,7 @@ pub fn check_available(config: &Config) -> bool {
     let Ok(client) = client else { return false };
 
     client
-        .get(&config.ollama_url)
+        .get(config.effective_ollama_url())
         .send()
         .map(|r| r.status().is_success())
         .unwrap_or(false)

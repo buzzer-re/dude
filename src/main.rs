@@ -10,6 +10,7 @@ mod profile;
 mod safety;
 mod session;
 mod suggest;
+mod tui;
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
@@ -123,21 +124,77 @@ fn main() {
 fn cmd_help() {
     println!("{}", "dude — your shell companion".yellow().bold());
     println!();
-    println!("  {} {}", "dude learn".white().bold(), "analyze your shell history".dimmed());
-    println!("  {} {}", "dude profile".white().bold(), "see what dude knows about you".dimmed());
-    println!("  {} {}", "dude ask <question>".white().bold(), "ask dude for a command".dimmed());
-    println!("  {} {}", "dude history".white().bold(), "see past interactions".dimmed());
-    println!("  {} {}", "dude forget".white().bold(), "wipe all learned data".dimmed());
-    println!("  {} {}", "dude config".white().bold(), "open config in your editor".dimmed());
-    println!("  {} {}", "dude status".white().bold(), "check provider status".dimmed());
-    println!("  {} {}", "dude context <question>".white().bold(), "show what would be sent to the LLM".dimmed());
-    println!("  {} {}", "dude model [name]".white().bold(), "show or set the current model".dimmed());
-    println!("  {} {}", "dude provider [name]".white().bold(), "show or set provider (ollama/claude)".dimmed());
-    println!("  {} {}", "dude clear".white().bold(), "clear conversation session".dimmed());
+    println!(
+        "  {} {}",
+        "dude learn".white().bold(),
+        "analyze your shell history".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude profile".white().bold(),
+        "see what dude knows about you".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude ask <question>".white().bold(),
+        "ask dude for a command".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude history".white().bold(),
+        "see past interactions".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude forget".white().bold(),
+        "wipe all learned data".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude config".white().bold(),
+        "open config in your editor".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude status".white().bold(),
+        "check provider status".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude context <question>".white().bold(),
+        "show what would be sent to the LLM".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude model [name]".white().bold(),
+        "show or set the current model".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude provider [name]".white().bold(),
+        "show or set provider (ollama/claude)".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "dude clear".white().bold(),
+        "clear conversation session".dimmed()
+    );
     println!();
-    println!("  {} {}", "dude <question>".white().bold(), "ask dude anything (no subcommand needed)".dimmed());
-    println!("  {} {}", "cmd | dude <question>".white().bold(), "pipe mode — analyze piped output".dimmed());
-    println!("  {} {}", "? <question>".white().bold(), "quick ask (via shell plugin)".dimmed());
+    println!(
+        "  {} {}",
+        "dude <question>".white().bold(),
+        "ask dude anything (no subcommand needed)".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "cmd | dude <question>".white().bold(),
+        "pipe mode — analyze piped output".dimmed()
+    );
+    println!(
+        "  {} {}",
+        "? <question>".white().bold(),
+        "quick ask (via shell plugin)".dimmed()
+    );
     println!();
     println!(
         "  {}",
@@ -146,7 +203,10 @@ fn cmd_help() {
 }
 
 fn cmd_learn() {
-    eprintln!("{} analyzing your shell history...", "dude:".yellow().bold());
+    eprintln!(
+        "{} analyzing your shell history...",
+        "dude:".yellow().bold()
+    );
     let profile = profile::Profile::analyze_and_build();
     eprintln!("{} done! learned your patterns.", "dude:".yellow().bold());
     println!();
@@ -218,18 +278,7 @@ fn cmd_forget() {
 }
 
 fn cmd_config() {
-    let path = config::config_path();
-    // Ensure config exists
-    let _ = config::Config::load();
-
-    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".into());
-    let status = std::process::Command::new(&editor)
-        .arg(path.to_str().unwrap_or(""))
-        .status();
-
-    if let Err(e) = status {
-        eprintln!("{} couldn't open editor: {e}", "dude:".yellow().bold());
-    }
+    tui::run_config_tui();
 }
 
 fn cmd_ask(question: &str) {
@@ -320,56 +369,60 @@ fn cmd_accept(typo: &str, correction: &str) {
 fn cmd_status() {
     let config = config::Config::load();
 
+    if config.needs_setup() {
+        eprintln!(
+            "{} not configured yet. run {} to set up.",
+            "dude:".yellow().bold(),
+            "dude config".white().bold()
+        );
+        return;
+    }
+
     eprintln!(
         "{} provider: {}",
         "dude:".yellow().bold(),
-        if config.use_claude() { "claude" } else { "ollama" }.white().bold()
+        config.effective_provider().white().bold()
     );
 
     if config.use_claude() {
         if claude::check_available(&config) {
-            eprintln!(
-                "{} claude API key is set",
-                "dude:".yellow().bold(),
-            );
-            let model = config.claude_model.as_deref().unwrap_or("claude-haiku-4-5-20251001");
+            eprintln!("{} claude auth is set", "dude:".yellow().bold(),);
+            let model = config
+                .claude_model
+                .as_deref()
+                .unwrap_or("claude-haiku-4-5-20251001");
             eprintln!(
                 "{} model: {}",
                 "dude:".yellow().bold(),
                 model.white().bold()
             );
         } else {
-            eprintln!(
-                "{} claude API key not set",
-                "dude:".red().bold(),
-            );
+            eprintln!("{} claude credentials not found", "dude:".red().bold(),);
         }
+    } else if ollama::check_available(&config) {
+        eprintln!(
+            "{} ollama is up at {}",
+            "dude:".yellow().bold(),
+            config.effective_ollama_url().cyan()
+        );
+        eprintln!(
+            "{} model: {}",
+            "dude:".yellow().bold(),
+            config.effective_model().white().bold()
+        );
     } else {
-        if ollama::check_available(&config) {
-            eprintln!(
-                "{} ollama is up at {}",
-                "dude:".yellow().bold(),
-                config.ollama_url.cyan()
-            );
-            eprintln!(
-                "{} model: {}",
-                "dude:".yellow().bold(),
-                config.model.white().bold()
-            );
-        } else {
-            eprintln!(
-                "{} ollama is not reachable at {}",
-                "dude:".red().bold(),
-                config.ollama_url
-            );
-            eprintln!("  try: {}", "ollama serve".white().bold());
-        }
+        eprintln!(
+            "{} ollama is not reachable at {}",
+            "dude:".red().bold(),
+            config.effective_ollama_url()
+        );
+        eprintln!("  try: {}", "ollama serve".white().bold());
     }
 
     eprintln!(
         "{} safety: {}",
         "dude:".yellow().bold(),
-        safety::describe_mode(&config.safety_mode).dimmed()
+        safety::describe_mode(config.effective_safety_mode()).dimmed()
     );
 }
 
@@ -389,7 +442,13 @@ fn cmd_context(question: &str) {
     eprintln!(
         "{} this is exactly what would be sent to {} (secrets redacted)",
         "dude:".yellow().bold(),
-        if config.use_claude() { "claude" } else { "ollama" }.white().bold()
+        if config.use_claude() {
+            "claude"
+        } else {
+            "ollama"
+        }
+        .white()
+        .bold()
     );
 }
 
@@ -410,7 +469,7 @@ fn cmd_model(name: Option<String>) {
             eprintln!(
                 "{} current model: {}",
                 "dude:".yellow().bold(),
-                config.model.white().bold()
+                config.effective_model().white().bold()
             );
         }
     }
@@ -442,7 +501,7 @@ fn cmd_provider(name: Option<String>) {
             eprintln!(
                 "{} current provider: {}",
                 "dude:".yellow().bold(),
-                config.provider.white().bold()
+                config.effective_provider().white().bold()
             );
         }
     }
@@ -455,7 +514,7 @@ fn cmd_clear_session() {
 
 fn cmd_safety_check(command: &str) {
     let config = config::Config::load();
-    let needs = safety::needs_confirmation(command, &config.safety_mode);
+    let needs = safety::needs_confirmation(command, config.effective_safety_mode());
 
     if safety::is_destructive(command) {
         eprintln!(
@@ -502,9 +561,24 @@ fn read_stdin_if_piped() -> Option<String> {
 fn is_known_subcommand(arg: &str) -> bool {
     matches!(
         arg,
-        "learn" | "profile" | "history" | "forget" | "config" | "ask"
-            | "cnf" | "accept" | "status" | "context" | "model"
-            | "provider" | "clear" | "safety-check" | "help" | "--help"
-            | "-h" | "--version" | "-V"
+        "learn"
+            | "profile"
+            | "history"
+            | "forget"
+            | "config"
+            | "ask"
+            | "cnf"
+            | "accept"
+            | "status"
+            | "context"
+            | "model"
+            | "provider"
+            | "clear"
+            | "safety-check"
+            | "help"
+            | "--help"
+            | "-h"
+            | "--version"
+            | "-V"
     )
 }

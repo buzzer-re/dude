@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::process::Command;
 
 use crate::config::Config;
 
@@ -26,27 +27,80 @@ struct ContentBlock {
     text: Option<String>,
 }
 
-pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<String, String> {
-    let api_key = config
-        .claude_api_key
-        .as_deref()
-        .filter(|k| !k.is_empty())
-        .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok().as_deref().map(|_| ""))
-        .ok_or_else(|| {
-            "dude: no claude API key. set claude_api_key in config or ANTHROPIC_API_KEY env var"
-                .to_string()
-        })?;
+#[derive(Deserialize)]
+struct KeychainCredentials {
+    #[serde(rename = "claudeAiOauth")]
+    claude_ai_oauth: Option<OAuthTokens>,
+}
 
-    // Re-read from env if config was empty
-    let api_key = if api_key.is_empty() {
-        std::env::var("ANTHROPIC_API_KEY")
-            .map_err(|_| "dude: ANTHROPIC_API_KEY not set".to_string())?
+#[derive(Deserialize)]
+struct OAuthTokens {
+    #[serde(rename = "accessToken")]
+    access_token: String,
+}
+
+/// Auth method resolved at query time.
+enum AuthMethod {
+    /// OAuth token from macOS Keychain (Claude Code credentials)
+    OAuth(String),
+    /// Direct API key from config or env
+    ApiKey(String),
+}
+
+/// Resolve the best auth method available.
+fn resolve_auth(config: &Config) -> Result<AuthMethod, String> {
+    // 1. Check config for explicit API key
+    if let Some(key) = config.claude_api_key.as_deref().filter(|k| !k.is_empty()) {
+        return Ok(AuthMethod::ApiKey(key.to_string()));
+    }
+
+    // 2. Check ANTHROPIC_API_KEY env var
+    if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
+        if !key.is_empty() {
+            return Ok(AuthMethod::ApiKey(key));
+        }
+    }
+
+    // 3. Try macOS Keychain (Claude Code OAuth credentials)
+    if let Some(token) = read_keychain_oauth() {
+        return Ok(AuthMethod::OAuth(token));
+    }
+
+    Err("dude: no claude credentials found. set claude_api_key in config, ANTHROPIC_API_KEY env var, or log in with Claude Code".to_string())
+}
+
+/// Read OAuth access token from macOS Keychain (Claude Code credentials).
+fn read_keychain_oauth() -> Option<String> {
+    let output = Command::new("security")
+        .args([
+            "find-generic-password",
+            "-s",
+            "Claude Code-credentials",
+            "-w",
+        ])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let json_str = String::from_utf8(output.stdout).ok()?;
+    let creds: KeychainCredentials = serde_json::from_str(json_str.trim()).ok()?;
+    let token = creds.claude_ai_oauth?.access_token;
+
+    if token.is_empty() {
+        None
     } else {
-        api_key.to_string()
-    };
+        Some(token)
+    }
+}
+
+pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<String, String> {
+    let auth = resolve_auth(config)?;
 
     let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(60))
         .build()
         .map_err(|e| format!("HTTP client error: {e}"))?;
 
@@ -57,7 +111,7 @@ pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<
 
     let request = ClaudeRequest {
         model: model.to_string(),
-        max_tokens: 200,
+        max_tokens: 300,
         system: system_prompt.to_string(),
         messages: vec![ClaudeMessage {
             role: "user".into(),
@@ -65,22 +119,27 @@ pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<
         }],
     };
 
-    let resp = client
+    let mut req_builder = client
         .post("https://api.anthropic.com/v1/messages")
-        .header("x-api-key", &api_key)
         .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&request)
-        .send()
-        .map_err(|e| {
-            if e.is_connect() {
-                "dude: can't reach Claude API".to_string()
-            } else if e.is_timeout() {
-                "dude: Claude API took too long".to_string()
-            } else {
-                format!("dude: Claude API error: {e}")
-            }
-        })?;
+        .header("content-type", "application/json");
+
+    req_builder = match &auth {
+        AuthMethod::OAuth(token) => req_builder
+            .header("Authorization", format!("Bearer {}", token))
+            .header("anthropic-beta", "oauth-2025-04-20"),
+        AuthMethod::ApiKey(key) => req_builder.header("x-api-key", key),
+    };
+
+    let resp = req_builder.json(&request).send().map_err(|e| {
+        if e.is_connect() {
+            "dude: can't reach Claude API".to_string()
+        } else if e.is_timeout() {
+            "dude: Claude API took too long".to_string()
+        } else {
+            format!("dude: Claude API error: {e}")
+        }
+    })?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -103,10 +162,5 @@ pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<
 }
 
 pub fn check_available(config: &Config) -> bool {
-    config
-        .claude_api_key
-        .as_deref()
-        .map(|k| !k.is_empty())
-        .unwrap_or(false)
-        || std::env::var("ANTHROPIC_API_KEY").is_ok()
+    resolve_auth(config).is_ok()
 }

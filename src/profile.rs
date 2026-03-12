@@ -1,8 +1,8 @@
+use crate::config::profile_path;
+use crate::history;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use crate::config::profile_path;
-use crate::history;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Profile {
@@ -96,10 +96,33 @@ fn analyze_history(entries: &[String]) -> (Vec<String>, Vec<String>, Vec<String>
     let mut dir_counts: HashMap<String, usize> = HashMap::new();
 
     let known_tools = [
-        "git", "docker", "cargo", "npm", "yarn", "pip", "brew", "kubectl",
-        "terraform", "python", "node", "ruby", "go", "rustc", "gcc", "make",
-        "cmake", "curl", "wget", "ssh", "scp", "rsync", "vim", "nvim",
-        "code", "tmux", "screen",
+        "git",
+        "docker",
+        "cargo",
+        "npm",
+        "yarn",
+        "pip",
+        "brew",
+        "kubectl",
+        "terraform",
+        "python",
+        "node",
+        "ruby",
+        "go",
+        "rustc",
+        "gcc",
+        "make",
+        "cmake",
+        "curl",
+        "wget",
+        "ssh",
+        "scp",
+        "rsync",
+        "vim",
+        "nvim",
+        "code",
+        "tmux",
+        "screen",
     ];
 
     for entry in entries {
@@ -121,7 +144,11 @@ fn analyze_history(entries: &[String]) -> (Vec<String>, Vec<String>, Vec<String>
 
     let mut top_commands: Vec<_> = cmd_counts.into_iter().collect();
     top_commands.sort_by(|a, b| b.1.cmp(&a.1));
-    let top_commands: Vec<String> = top_commands.iter().take(15).map(|(k, _)| k.clone()).collect();
+    let top_commands: Vec<String> = top_commands
+        .iter()
+        .take(15)
+        .map(|(k, _)| k.clone())
+        .collect();
 
     let mut top_dirs: Vec<_> = dir_counts.into_iter().collect();
     top_dirs.sort_by(|a, b| b.1.cmp(&a.1));
@@ -172,11 +199,9 @@ pub fn display_profile(profile: &Profile) {
     let db_path = crate::config::db_path();
     if db_path.exists() {
         if let Ok(conn) = rusqlite::Connection::open(&db_path) {
-            if let Ok(count) = conn.query_row(
-                "SELECT COUNT(*) FROM corrections",
-                [],
-                |row| row.get::<_, i64>(0),
-            ) {
+            if let Ok(count) = conn.query_row("SELECT COUNT(*) FROM corrections", [], |row| {
+                row.get::<_, i64>(0)
+            }) {
                 if count > 0 {
                     println!("  {} {}", "Learned corrections:".dimmed(), count);
                 }

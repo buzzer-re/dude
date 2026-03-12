@@ -11,7 +11,7 @@ pub fn is_destructive(command: &str) -> bool {
         "> /dev/disk",
         "chmod -R 777 /",
         "chmod 777 /",
-        ":(){",    // fork bomb
+        ":(){", // fork bomb
         "mv /* ",
         "mv / ",
     ];
@@ -40,12 +40,35 @@ pub fn needs_confirmation(command: &str, safety_mode: &str) -> bool {
 pub fn is_safe_command(command: &str) -> bool {
     let first_word = command.split_whitespace().next().unwrap_or("");
     let safe_commands = [
-        "ls", "pwd", "echo", "cat", "head", "tail", "wc", "which", "where",
-        "whoami", "date", "cal", "uptime", "df", "du", "free", "uname",
-        "git status", "git log", "git diff", "git branch",
-        "cargo check", "cargo test", "cargo build",
-        "npm test", "npm run",
-        "python --version", "node --version", "rustc --version",
+        "ls",
+        "pwd",
+        "echo",
+        "cat",
+        "head",
+        "tail",
+        "wc",
+        "which",
+        "where",
+        "whoami",
+        "date",
+        "cal",
+        "uptime",
+        "df",
+        "du",
+        "free",
+        "uname",
+        "git status",
+        "git log",
+        "git diff",
+        "git branch",
+        "cargo check",
+        "cargo test",
+        "cargo build",
+        "npm test",
+        "npm run",
+        "python --version",
+        "node --version",
+        "rustc --version",
     ];
 
     // Check full command match first
@@ -54,7 +77,9 @@ pub fn is_safe_command(command: &str) -> bool {
     }
 
     // Check first-word-only safe list
-    let safe_first = ["ls", "pwd", "echo", "whoami", "date", "cal", "uptime", "which", "where"];
+    let safe_first = [
+        "ls", "pwd", "echo", "whoami", "date", "cal", "uptime", "which", "where",
+    ];
     safe_first.contains(&first_word)
 }
 

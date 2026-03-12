@@ -1,5 +1,3 @@
-use colored::Colorize;
-
 use crate::claude;
 use crate::config::Config;
 use crate::context;
@@ -189,18 +187,4 @@ fn clean_response(response: &str) -> String {
     let first_line = stripped.lines().next().unwrap_or("").trim();
 
     first_line.to_string()
-}
-
-/// Display the suggestion and handle user confirmation.
-/// Returns the command string if the user accepted.
-pub fn present_suggestion(suggestion: &str) -> Option<String> {
-    eprintln!(
-        "{} {}",
-        "dude:".yellow().bold(),
-        suggestion.white().bold()
-    );
-
-    // In the zsh plugin, confirmation is handled by the shell.
-    // When called directly, just output the command.
-    Some(suggestion.to_string())
 }

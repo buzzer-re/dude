@@ -139,9 +139,7 @@ pub fn build_pipe_prompt(question: &str, piped_input: &str, history_count: usize
 
     let filtered = filter::redact_secrets(&truncated);
 
-    format!(
-        "User asks: {question}\nCWD: {cwd}{history_str}\n\nPiped input:\n```\n{filtered}\n```"
-    )
+    format!("User asks: {question}\nCWD: {cwd}{history_str}\n\nPiped input:\n```\n{filtered}\n```")
 }
 
 /// Load last command context from the temp file written by the shell plugin.
@@ -160,12 +158,14 @@ fn load_last_command_context() -> String {
 }
 
 /// Build the full context string for the `dude context` transparency command.
-pub fn build_full_context_display(question: &str, profile: &Profile, history_count: usize) -> String {
+pub fn build_full_context_display(
+    question: &str,
+    profile: &Profile,
+    history_count: usize,
+) -> String {
     let system = build_system_prompt(profile);
     let prompt = build_question_prompt(question, history_count);
     let filtered_prompt = filter::redact_secrets(&prompt);
 
-    format!(
-        "=== SYSTEM PROMPT ===\n{system}\n\n=== USER PROMPT ===\n{filtered_prompt}\n"
-    )
+    format!("=== SYSTEM PROMPT ===\n{system}\n\n=== USER PROMPT ===\n{filtered_prompt}\n")
 }

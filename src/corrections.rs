@@ -1,5 +1,5 @@
-use rusqlite::{Connection, params};
 use crate::config::db_path;
+use rusqlite::{params, Connection};
 
 pub struct Corrections {
     conn: Connection,
@@ -19,20 +19,9 @@ impl Corrections {
                 count INTEGER NOT NULL DEFAULT 1,
                 last_used TEXT,
                 PRIMARY KEY (typo, correction)
-            )"
+            )",
         )?;
         Ok(Self { conn })
-    }
-
-    /// Look up a known correction for a typo. Returns the most frequent one.
-    pub fn lookup(&self, typo: &str) -> Option<String> {
-        self.conn
-            .query_row(
-                "SELECT correction FROM corrections WHERE typo = ?1 ORDER BY count DESC LIMIT 1",
-                params![typo],
-                |row| row.get(0),
-            )
-            .ok()
     }
 
     /// Record that the user accepted a correction.
@@ -56,9 +45,5 @@ impl Corrections {
                 |row| row.get(0),
             )
             .ok()
-    }
-
-    pub fn clear(&self) {
-        let _ = self.conn.execute("DELETE FROM corrections", []);
     }
 }

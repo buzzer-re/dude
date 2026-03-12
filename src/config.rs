@@ -21,15 +21,15 @@ pub struct Config {
 }
 
 fn default_model() -> String {
-    "qwen2.5-coder:1.5b".into()
+    String::new()
 }
 
 fn default_ollama_url() -> String {
-    "http://localhost:11434".into()
+    String::new()
 }
 
 fn default_safety_mode() -> String {
-    "confirm".into()
+    String::new()
 }
 
 fn default_history_context() -> usize {
@@ -39,13 +39,56 @@ fn default_history_context() -> usize {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            model: default_model(),
-            ollama_url: default_ollama_url(),
-            safety_mode: default_safety_mode(),
-            history_context: default_history_context(),
-            provider: "ollama".into(),
+            model: String::new(),
+            ollama_url: String::new(),
+            safety_mode: String::new(),
+            history_context: 20,
+            provider: String::new(),
             claude_api_key: None,
             claude_model: None,
+        }
+    }
+}
+
+impl Config {
+    /// Check if this config has been set up (not a blank default).
+    pub fn needs_setup(&self) -> bool {
+        self.provider.is_empty()
+    }
+
+    /// Return the effective provider, falling back to "ollama".
+    pub fn effective_provider(&self) -> &str {
+        if self.provider.is_empty() {
+            "ollama"
+        } else {
+            &self.provider
+        }
+    }
+
+    /// Return the effective ollama model.
+    pub fn effective_model(&self) -> &str {
+        if self.model.is_empty() {
+            "qwen2.5-coder:1.5b"
+        } else {
+            &self.model
+        }
+    }
+
+    /// Return the effective ollama URL.
+    pub fn effective_ollama_url(&self) -> &str {
+        if self.ollama_url.is_empty() {
+            "http://localhost:11434"
+        } else {
+            &self.ollama_url
+        }
+    }
+
+    /// Return the effective safety mode.
+    pub fn effective_safety_mode(&self) -> &str {
+        if self.safety_mode.is_empty() {
+            "confirm"
+        } else {
+            &self.safety_mode
         }
     }
 }

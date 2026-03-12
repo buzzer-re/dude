@@ -19,7 +19,7 @@ pub fn read_shell_history(max_lines: usize) -> Vec<String> {
         .filter_map(|line| {
             // zsh extended history format: ": timestamp:0;command"
             if line.starts_with(": ") {
-                line.splitn(2, ';').nth(1).map(|s| s.to_string())
+                line.split_once(';').map(|(_, s)| s.to_string())
             } else if line.starts_with('#') || line.trim().is_empty() {
                 None
             } else {

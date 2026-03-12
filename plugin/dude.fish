@@ -71,10 +71,6 @@ function _dude_postexec --on-event fish_postexec
         printf "command: %s\nexit_code: %d\ncwd: %s\n" \
             "$last_cmd" "$last_exit" "$PWD" > "$_DUDE_LAST_CMD_FILE"
 
-        # Smart suggestion after failed commands
-        if test $last_exit -ne 0; and test $last_exit -ne 127
-            echo -e "  \033[2mdude: command failed (exit $last_exit) — try: \033[0m\033[1mdude ask 'why did that fail'\033[0m" >&2
-        end
     end
 end
 

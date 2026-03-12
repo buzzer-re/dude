@@ -1,9 +1,17 @@
 /// Filter sensitive values from text before sending to the LLM.
 /// Redacts environment variables and strings that look like secrets.
-
 const SENSITIVE_PATTERNS: &[&str] = &[
-    "KEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD", "CREDENTIAL",
-    "API_KEY", "APIKEY", "AUTH", "PRIVATE", "ACCESS_KEY",
+    "KEY",
+    "TOKEN",
+    "SECRET",
+    "PASSWORD",
+    "PASSWD",
+    "CREDENTIAL",
+    "API_KEY",
+    "APIKEY",
+    "AUTH",
+    "PRIVATE",
+    "ACCESS_KEY",
 ];
 
 /// Redact environment variable values that look like secrets.
@@ -48,24 +56,6 @@ fn looks_like_secret_assignment(line: &str) -> bool {
     SENSITIVE_PATTERNS
         .iter()
         .any(|pattern| var_upper.contains(pattern))
-}
-
-/// Collect current environment variables, redacting sensitive ones.
-/// Returns a summary string suitable for LLM context.
-pub fn safe_env_summary() -> String {
-    let interesting_vars = [
-        "SHELL", "EDITOR", "TERM", "LANG", "HOME", "USER",
-        "PWD", "OLDPWD", "GOPATH", "CARGO_HOME", "RUSTUP_HOME",
-        "VIRTUAL_ENV", "NODE_ENV", "KUBECONFIG",
-    ];
-
-    let mut summary = String::new();
-    for var in &interesting_vars {
-        if let Ok(val) = std::env::var(var) {
-            summary.push_str(&format!("{}={}\n", var, val));
-        }
-    }
-    summary
 }
 
 #[cfg(test)]
