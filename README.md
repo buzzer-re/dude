@@ -1,12 +1,12 @@
-# dude
+# The Dude
 
-**your shell companion for when typing is hard**
+**The shell companion for REALLY lazy people**
 
-you know when you type `gti status` instead of `git status` and your terminal just stares at you? dude fixes that. you know when you forget the `find` flags for the 400th time? dude knows them. you know when you're too lazy to google "how to kill process on port 3000"? just ask dude.
+You know when you type `gti status` instead of `git status` and your terminal just stares at you? Dude fixes that. You know when you forget the `find` flags for the 400th time? Dude knows them. You know when you're too lazy to google "how to kill process on port 3000"? Just ask Dude.
 
-dude sits in your shell, watches you mess up, and quietly suggests what you probably meant. it learns your patterns, remembers your corrections, and gets smarter over time. all locally. no cloud unless you want it.
+Dude sits in your shell, watches you mess up, and quietly suggests what you probably meant. It learns your patterns, remembers your corrections, and gets smarter over time. All locally. No cloud unless you want it.
 
-## what it does
+## What It Does
 
 ```
 $ gti status
@@ -32,21 +32,21 @@ $ dude "list all docker containers including stopped"
 dude: docker ps -a
 ```
 
-## how it works
+## How It Works
 
-1. you type something wrong
-2. zsh says "command not found" and asks dude
-3. dude checks its local database first (instant, no network)
-4. if it hasn't seen this typo before, it asks your LLM
-5. you hit enter (or not), dude remembers for next time
+1. You type something wrong
+2. Zsh says "command not found" and asks Dude
+3. Dude checks its local database first (instant, no network)
+4. If it hasn't seen this typo before, it asks your LLM
+5. You hit Enter (or not), Dude remembers for next time
 
-after a few corrections, dude stops asking the LLM entirely. it just knows.
+After a few corrections, Dude stops asking the LLM entirely. It just knows.
 
-## providers
+## Providers
 
-dude works with two backends — pick one or both:
+Dude works with two backends — pick one or both:
 
-### ollama (local, free, private)
+### Ollama (Local, Free, Private)
 
 ```bash
 brew install ollama
@@ -54,82 +54,87 @@ ollama serve
 ollama pull qwen2.5-coder:1.5b   # fast + small, good for corrections
 ```
 
-### claude (smart, fast, not free)
+### Claude (Smart, Fast, Not Free)
 
-if you have [Claude Code](https://claude.ai/claude-code) installed, dude reads your OAuth token from the macOS Keychain automatically. no config needed.
+If you have [Claude Code](https://claude.ai/claude-code) installed, Dude reads your OAuth token from the macOS Keychain automatically. No config needed.
 
 ```bash
 dude provider claude
 ```
 
-**recommended model:** `claude-haiku-4-5-20251001` — fast, cheap ($0.25/1M input tokens), and it can actually count to 7.
+**Recommended model:** `claude-haiku-4-5-20251001` — fast, cheap ($0.25/1M input tokens), and it can actually count to 7.
 
-you can also use a direct API key:
+You can also use a direct API key:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 dude provider claude
 ```
 
-## install
+## Install
 
+**One-liner** (downloads pre-built binary from GitHub releases):
 ```bash
-git clone https://github.com/yourusername/dude.git
+curl -fsSL https://raw.githubusercontent.com/mariko/dude/main/install.sh | bash
+```
+
+**From source** (if you prefer or no release exists yet):
+```bash
+git clone https://github.com/mariko/dude.git
 cd dude
 ./install.sh
 ```
 
-needs: rust toolchain (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
+The installer:
+- Tries to download a pre-built binary from GitHub releases first
+- Falls back to building from source if no release is available (needs [Rust](https://rustup.rs))
+- Installs to `~/.local/bin/dude`
+- Detects your shell (zsh/bash/fish) and installs the right plugin
+- Runs `dude learn` to analyze your shell history
 
-the installer:
-- builds the binary
-- installs to `~/.local/bin/dude`
-- detects your shell (zsh/bash/fish) and installs the right plugin
-- runs `dude learn` to analyze your shell history
+### Shell Support
 
-### shell support
-
-| shell | plugin | how it works |
+| Shell | Plugin | How It Works |
 |-------|--------|-------------|
-| **zsh** | `dude.plugin.zsh` | `command_not_found_handler` + `accept-line` widget for `?` |
-| **bash** | `dude.bash` | `command_not_found_handle` (no trailing 'r') |
-| **fish** | `dude.fish` | `fish_command_not_found` event, auto-loads from `conf.d/` |
+| **Zsh** | `dude.plugin.zsh` | `command_not_found_handler` + `accept-line` widget for `?` |
+| **Bash** | `dude.bash` | `command_not_found_handle` (no trailing 'r') |
+| **Fish** | `dude.fish` | `fish_command_not_found` event, auto-loads from `conf.d/` |
 
-## usage
+## Usage
 
 ```bash
-# just type wrong, dude catches it
+# Just type wrong, Dude catches it
 gti stauts                      # → git status
 
-# ask anything — no subcommand needed
+# Ask anything — no subcommand needed
 dude "kill process on port 3000"
 
-# pipe stuff in for analysis
+# Pipe stuff in for analysis
 cat crash.log | dude "summarize"
 kubectl get pods | dude "which ones are failing"
 
 # ? prefix in your shell (zsh)
 ? how do i tar without compression
 
-# follow-ups work (15-min session memory)
+# Follow-ups work (15-min session memory)
 ? find large files
 ? now only in the home directory
 
-# manage dude
-dude config                     # interactive TUI settings
-dude status                     # check provider + model
-dude model qwen2.5-coder:7b    # swap model
-dude provider claude            # switch to claude
-dude context "test query"       # see exactly what gets sent to the LLM
-dude learn                      # re-analyze shell history
-dude profile                    # see what dude knows about you
-dude history                    # past interactions
-dude clear                      # wipe conversation session
-dude forget                     # nuclear option — wipe all learned data
+# Manage Dude
+dude config                     # Interactive TUI settings
+dude status                     # Check provider + model
+dude model qwen2.5-coder:7b    # Swap model
+dude provider claude            # Switch to Claude
+dude context "test query"       # See exactly what gets sent to the LLM
+dude learn                      # Re-analyze shell history
+dude profile                    # See what Dude knows about you
+dude history                    # Past interactions
+dude clear                      # Wipe conversation session
+dude forget                     # Nuclear option — wipe all learned data
 ```
 
-## config
+## Config
 
-run `dude config` for an interactive TUI, or edit `~/Library/Application Support/dude/config.toml`:
+Run `dude config` for an interactive TUI, or edit `~/Library/Application Support/dude/config.toml`:
 
 ```toml
 provider = "claude"                          # or "ollama"
@@ -140,57 +145,33 @@ ollama_url = "http://localhost:11434"
 history_context = 20
 ```
 
-### safety modes
+### Safety Modes
 
-| mode | behavior |
+| Mode | Behavior |
 |------|----------|
-| `confirm` | always asks before running (default) |
-| `auto` | safe commands (`ls`, `git status`, etc.) run immediately, others ask |
-| `yolo` | never asks. live dangerously. |
+| `confirm` | Always asks before running (default) |
+| `auto` | Safe commands (`ls`, `git status`, etc.) run immediately, others ask |
+| `yolo` | Never asks. Live dangerously. |
 
-destructive commands (`rm -rf /`, `dd if=/dev/zero`, etc.) are **always blocked** regardless of mode.
+Destructive commands (`rm -rf /`, `dd if=/dev/zero`, etc.) are **always blocked** regardless of mode.
 
-## how dude learns
+## How Dude Learns
 
-- **shell history** — on first run, dude analyzes your history to learn what tools you use, your common directories, and your command style
-- **corrections database** — every time you accept a suggestion, dude records it in a local SQLite database. after 3 accepted corrections for the same typo, it becomes instant (no LLM needed)
-- **session memory** — dude remembers the last few exchanges for 15 minutes, so follow-up questions work naturally
-- **secret filtering** — environment variables containing KEY, TOKEN, SECRET, PASSWORD are automatically redacted before anything is sent to the LLM
+- **Shell History** — On first run, Dude analyzes your history to learn what tools you use, your common directories, and your command style
+- **Corrections Database** — Every time you accept a suggestion, Dude records it in a local SQLite database. After 3 accepted corrections for the same typo, it becomes instant (no LLM needed)
+- **Session Memory** — Dude remembers the last few exchanges for 15 minutes, so follow-up questions work naturally
+- **Secret Filtering** — Environment variables containing KEY, TOKEN, SECRET, PASSWORD are automatically redacted before anything is sent to the LLM
 
-## transparency
+## Transparency
 
 ```bash
 dude context "find large files"
 ```
 
-shows you **exactly** what would be sent to the LLM — system prompt, user context, history, session. no hidden data.
+Shows you **exactly** what would be sent to the LLM — system prompt, user context, history, session. No hidden data.
 
-## uninstall
+## Uninstall
 
 ```bash
 ./uninstall.sh
 ```
-
-## architecture
-
-```
-src/
-├── main.rs          cli entry point
-├── suggest.rs       correction logic (local DB → LLM fallback)
-├── ollama.rs        ollama API (with reasoning model support)
-├── claude.rs        claude API (OAuth + API key auth)
-├── context.rs       prompt building (system + user + session)
-├── session.rs       conversation memory (15-min TTL)
-├── corrections.rs   SQLite learning database
-├── safety.rs        destructive command detection
-├── filter.rs        secret redaction
-├── profile.rs       user profiling from shell history
-├── history.rs       shell history reader (zsh/bash)
-├── config.rs        TOML config management
-├── audit.rs         interaction logging
-└── tui.rs           ratatui interactive config editor
-```
-
-## license
-
-MIT

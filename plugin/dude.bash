@@ -69,6 +69,45 @@ command_not_found_handle() {
     fi
 }
 
+# ─── "?" prefix — intercept via DEBUG trap + extdebug ────────────────────
+# With extdebug, returning non-zero from a DEBUG trap prevents the command
+# from executing. This lets us intercept "? question" before bash tries to
+# run it (which would fail with "?: command not found").
+shopt -s extdebug
+
+_dude_check_question() {
+    local cmd="$BASH_COMMAND"
+
+    # Only intercept "? ..." at the top level
+    if [[ "$BASH_SUBSHELL" -eq 0 && "$cmd" == "?"* && -z "$_DUDE_IN_QUESTION" ]]; then
+        local question="${cmd#\?}"
+        question="${question# }"
+
+        if [[ -n "$question" ]]; then
+            _DUDE_IN_QUESTION=1
+
+            local suggestion
+            suggestion=$("$DUDE_BIN" ask "$question" 2>/dev/tty)
+            local exit_code=$?
+
+            if [[ $exit_code -eq 0 && -n "$suggestion" ]]; then
+                echo -n "  run it? [Y/n] " >&2
+                read -r -n 1 response
+                echo >&2
+
+                if [[ "$response" == "" || "$response" == "y" || "$response" == "Y" ]]; then
+                    eval "$suggestion"
+                fi
+            fi
+
+            unset _DUDE_IN_QUESTION
+            return 1  # non-zero = don't execute the original command
+        fi
+    fi
+    return 0  # let everything else through
+}
+trap '_dude_check_question' DEBUG
+
 # ─── PROMPT_COMMAND for tracking last command ────────────────────────────
 _dude_prompt_command() {
     local last_exit=$?

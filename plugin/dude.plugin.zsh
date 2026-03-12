@@ -16,8 +16,9 @@ else
 fi
 
 # Auto-learn on first load if no profile exists
-_dude_config_dir="${XDG_CONFIG_HOME:-$HOME/Library/Application Support}/dude"
-if [[ ! -f "$_dude_config_dir/profile.toml" ]] && [[ ! -f "$HOME/.config/dude/profile.toml" ]]; then
+# Check both macOS and XDG config locations
+if [[ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/dude/profile.toml" ]] && \
+   [[ ! -f "$HOME/Library/Application Support/dude/profile.toml" ]]; then
     "$DUDE_BIN" learn &>/dev/null &!
 fi
 
