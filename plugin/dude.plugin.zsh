@@ -51,6 +51,8 @@ command_not_found_handler() {
 
     if [[ $safety_exit -eq 0 ]]; then
         "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &!
+        # Inject the corrected command into shell history
+        print -s "$suggestion"
         eval "$suggestion"
         return $?
     fi
@@ -65,6 +67,8 @@ command_not_found_handler() {
 
     if [[ "$response" == $'\n' || "$response" == "y" || "$response" == "Y" || "$response" == "" ]]; then
         "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &!
+        # Inject the corrected command into shell history
+        print -s "$suggestion"
         eval "$suggestion"
     else
         return 127
@@ -102,6 +106,7 @@ _dude_accept_line() {
         echo >&2
 
         if [[ "$response" == $'\n' || "$response" == "y" || "$response" == "Y" || "$response" == "" ]]; then
+            print -s "$suggestion"
             eval "$suggestion"
         fi
     else

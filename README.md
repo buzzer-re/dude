@@ -74,12 +74,12 @@ dude provider claude
 
 **One-liner** (downloads pre-built binary from GitHub releases):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mariko/dude/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/buzzer-re/dude/main/install.sh | bash
 ```
 
 **From source** (if you prefer or no release exists yet):
 ```bash
-git clone https://github.com/mariko/dude.git
+git clone https://github.com/buzzer-re/dude.git
 cd dude
 ./install.sh
 ```

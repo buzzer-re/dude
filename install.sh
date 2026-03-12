@@ -9,7 +9,7 @@ DIM='\033[2m'
 RESET='\033[0m'
 
 # ─── Config ──────────────────────────────────────────────────────────────
-GITHUB_REPO="mariko/dude"  # change this to your actual repo
+GITHUB_REPO="buzzer-re/dude"
 INSTALL_DIR="$HOME/.local/bin"
 PLUGIN_INSTALL_DIR="$HOME/.config/dude"
 

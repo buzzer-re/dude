@@ -457,20 +457,37 @@ fn cmd_model(name: Option<String>) {
 
     match name {
         Some(model_name) => {
-            config.model = model_name.clone();
+            if config.use_claude() {
+                config.claude_model = Some(model_name.clone());
+            } else {
+                config.model = model_name.clone();
+            }
             config.save();
             eprintln!(
-                "{} model set to {}",
+                "{} {} model set to {}",
                 "dude:".yellow().bold(),
+                config.effective_provider().white(),
                 model_name.white().bold()
             );
         }
         None => {
-            eprintln!(
-                "{} current model: {}",
-                "dude:".yellow().bold(),
-                config.effective_model().white().bold()
-            );
+            if config.use_claude() {
+                let model = config
+                    .claude_model
+                    .as_deref()
+                    .unwrap_or("claude-haiku-4-5-20251001");
+                eprintln!(
+                    "{} current model: {} (claude)",
+                    "dude:".yellow().bold(),
+                    model.white().bold()
+                );
+            } else {
+                eprintln!(
+                    "{} current model: {} (ollama)",
+                    "dude:".yellow().bold(),
+                    config.effective_model().white().bold()
+                );
+            }
         }
     }
 }

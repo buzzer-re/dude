@@ -47,6 +47,7 @@ command_not_found_handle() {
     if [[ $safety_exit -eq 0 ]]; then
         "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &>/dev/null &
         disown
+        history -s "$suggestion"
         eval "$suggestion"
         return $?
     fi
@@ -63,6 +64,7 @@ command_not_found_handle() {
     if [[ "$response" == "" || "$response" == "y" || "$response" == "Y" ]]; then
         "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &>/dev/null &
         disown
+        history -s "$suggestion"
         eval "$suggestion"
     else
         return 127
@@ -96,6 +98,7 @@ _dude_check_question() {
                 echo >&2
 
                 if [[ "$response" == "" || "$response" == "y" || "$response" == "Y" ]]; then
+                    history -s "$suggestion"
                     eval "$suggestion"
                 fi
             fi

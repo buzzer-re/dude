@@ -77,7 +77,13 @@ fn build_fields() -> Vec<ConfigField> {
                     ("qwen3.5:2b", "Reasoning model (slower)"),
                     ("gemma3:4b", "Google's compact model"),
                 ],
-                get: |c| c.model.clone(),
+                get: |c| {
+                    if c.model.is_empty() || c.model.starts_with("claude") {
+                        String::new()
+                    } else {
+                        c.model.clone()
+                    }
+                },
                 set: |c, v| c.model = v,
             },
         },
@@ -89,12 +95,7 @@ fn build_fields() -> Vec<ConfigField> {
                     ("claude-sonnet-4-6", "Smarter, balanced"),
                     ("claude-opus-4-6", "Most capable"),
                 ],
-                get: |c| {
-                    c.claude_model
-                        .as_deref()
-                        .unwrap_or("claude-haiku-4-5-20251001")
-                        .to_string()
-                },
+                get: |c| c.claude_model.as_deref().unwrap_or("").to_string(),
                 set: |c, v| c.claude_model = Some(v),
             },
         },

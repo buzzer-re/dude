@@ -486,7 +486,7 @@ def scene_outro(frame_counter):
     img = Image.new("RGB", (WIDTH, HEIGHT), BG)
     draw = ImageDraw.Draw(img)
     draw.text((center_x("The Dude", title_font), HEIGHT // 2 - 100), "The Dude", fill=YELLOW, font=title_font)
-    draw.text((center_x("github.com/yourusername/dude"), HEIGHT // 2 - 20), "github.com/yourusername/dude", fill=CYAN, font=FONT)
+    draw.text((center_x("github.com/buzzer-re/dude"), HEIGHT // 2 - 20), "github.com/buzzer-re/dude", fill=CYAN, font=FONT)
     draw.text((center_x("pip install laziness not required"), HEIGHT // 2 + 30), "pip install laziness not required", fill=DIM, font=FONT)
     draw.text((center_x("ollama  |  claude"), HEIGHT // 2 + 80), "ollama  |  claude", fill=FG, font=FONT)
 

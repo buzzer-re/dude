@@ -41,6 +41,8 @@ function fish_command_not_found
     if test $safety_exit -eq 0
         $DUDE_BIN accept "$failed_cmd" "$suggestion" &>/dev/null &
         disown
+        builtin history merge
+        builtin history add -- "$suggestion"
         eval $suggestion
         return $status
     end
@@ -54,6 +56,8 @@ function fish_command_not_found
     if test -z "$response"; or test "$response" = y; or test "$response" = Y
         $DUDE_BIN accept "$failed_cmd" "$suggestion" &>/dev/null &
         disown
+        builtin history merge
+        builtin history add -- "$suggestion"
         eval $suggestion
     else
         return 127
