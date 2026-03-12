@@ -6,7 +6,7 @@ https://github.com/user-attachments/assets/9d88bd83-27e7-4b05-8bd7-c4f6b8d503c1
 
 You know when you type `gti status` instead of `git status` and your terminal just stares at you? Dude fixes that. You know when you forget the `find` flags for the 400th time? Dude knows them. You know when you're too lazy to google "how to kill process on port 3000"? Just ask Dude.
 
-Dude sits in your shell, watches you mess up, and quietly suggests what you probably meant. It learns your patterns, remembers your corrections, and gets smarter over time. All locally. No cloud unless you want it.
+Dude sits in your shell, watches you mess up, and quietly suggests what you probably meant. It remembers your mistakes and gets faster the more you use it. All locally. No cloud unless you want it.
 
 ## What It Does
 
@@ -85,13 +85,6 @@ git clone https://github.com/buzzer-re/dude.git
 cd dude
 ./install.sh
 ```
-
-The installer:
-- Tries to download a pre-built binary from GitHub releases first
-- Falls back to building from source if no release is available (needs [Rust](https://rustup.rs))
-- Installs to `~/.local/bin/dude`
-- Detects your shell (zsh/bash/fish) and installs the right plugin
-- Runs `dude learn` to analyze your shell history
 
 ### Shell Support
 
