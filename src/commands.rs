@@ -74,15 +74,10 @@ pub fn help() {
         "cmd | dude <question>".white().bold(),
         "pipe mode — analyze piped output".dimmed()
     );
-    println!(
-        "  {} {}",
-        "? <question>".white().bold(),
-        "quick ask (via shell plugin)".dimmed()
-    );
     println!();
     println!(
         "  {}",
-        "Just type normally — dude intercepts command-not-found automatically.".dimmed()
+        "Just type naturally — dude intercepts command-not-found automatically.".dimmed()
     );
 }
 

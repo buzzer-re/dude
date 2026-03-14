@@ -87,47 +87,7 @@ command_not_found_handler() {
     _DUDE_CNF_ACTIVE=0
 }
 
-# ─── "?" prefix — intercept via accept-line widget ──────────────────────
-# We override accept-line so "? question" never reaches zsh's executor.
-# Without this, zsh treats ? as a glob and errors with "no matches found".
-_dude_accept_line() {
-    local cmd="$BUFFER"
-
-    if [[ "$cmd" == \?* ]]; then
-        local question="${cmd#\?}"
-        question="${question# }"  # trim leading space
-
-        # Clear the line so zsh doesn't try to execute "? ..."
-        BUFFER=""
-        zle .accept-line
-
-        if [[ -z "$question" ]]; then
-            return
-        fi
-
-        local suggestion
-        suggestion=$("$DUDE_BIN" ask "$question" 2>/dev/tty)
-        local exit_code=$?
-
-        if [[ $exit_code -ne 0 || -z "$suggestion" ]]; then
-            return
-        fi
-
-        echo -n "  run it? [Enter/n] " >&2
-        read -r -k 1 response
-        echo >&2
-
-        if [[ "$response" == $'\n' || "$response" == "y" || "$response" == "Y" || "$response" == "" ]]; then
-            print -s "$suggestion"
-            eval "$suggestion"
-        fi
-    else
-        zle .accept-line
-    fi
-}
-zle -N accept-line _dude_accept_line
-
-# ─── Track last command + hint after failures ────────────────────────────
+# ─── Track last command for "why did that fail" ─────────────────────────
 _dude_preexec() {
     _DUDE_LAST_CMD="$1"
 }
