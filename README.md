@@ -2,7 +2,7 @@
 
 **The shell companion for REALLY lazy people**
 
-https://github.com/user-attachments/assets/9d88bd83-27e7-4b05-8bd7-c4f6b8d503c1
+https://github.com/user-attachments/assets/a3d2a56b-7eda-4d7d-adc9-14001a1878ff
 
 You know when you type `gti status` instead of `git status` and your terminal just stares at you? Dude fixes that. You know when you forget the `find` flags for the 400th time? Dude knows them. You know when you're too lazy to google "how to kill process on port 3000"? Just ask Dude.
 
@@ -13,12 +13,6 @@ Dude sits in your shell, watches you mess up, and quietly suggests what you prob
 ```
 $ gti status
 dude: git status
-  run it? [Enter/n]
-```
-
-```
-$ ? find files larger than 100mb
-dude: find . -size +100M -type f
   run it? [Enter/n]
 ```
 
@@ -34,12 +28,20 @@ $ dude "list all docker containers including stopped"
 dude: docker ps -a
 ```
 
+You don't even need `dude` — just type what you want in plain English:
+
+```
+$ show me large files
+dude: find . -size +100M -type f
+  run it? [Enter/n]
+```
+
 ## How It Works
 
-1. You type something wrong
-2. Zsh says "command not found" and asks Dude
+1. You type something — a typo, a question, plain English
+2. Shell says "command not found" and asks Dude
 3. Dude checks its local database first (instant, no network)
-4. If it hasn't seen this typo before, it asks your LLM
+4. If it hasn't seen this before, it asks your LLM
 5. You hit Enter (or not), Dude remembers for next time
 
 After a few corrections, Dude stops asking the LLM entirely. It just knows.
@@ -90,7 +92,7 @@ cd dude
 
 | Shell | Plugin | How It Works |
 |-------|--------|-------------|
-| **Zsh** | `dude.plugin.zsh` | `command_not_found_handler` + `accept-line` widget for `?` |
+| **Zsh** | `dude.plugin.zsh` | `command_not_found_handler` |
 | **Bash** | `dude.bash` | `command_not_found_handle` (no trailing 'r') |
 | **Fish** | `dude.fish` | `fish_command_not_found` event, auto-loads from `conf.d/` |
 
@@ -107,12 +109,9 @@ dude "kill process on port 3000"
 cat crash.log | dude "summarize"
 kubectl get pods | dude "which ones are failing"
 
-# ? prefix in your shell (zsh)
-? how do i tar without compression
-
-# Follow-ups work (15-min session memory)
-? find large files
-? now only in the home directory
+# Just type in natural language
+find large files
+now only in the home directory
 
 # Manage Dude
 dude config                     # Interactive TUI settings
