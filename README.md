@@ -35,6 +35,8 @@ cd dude
 
 The install script auto-detects your shell and installs the right plugin.
 
+> **Tip:** If you use Zsh, [oh-my-zsh](https://ohmyz.sh/) is optional but works great with dude — it auto-registers as a plugin during install.
+
 ## What It Does
 
 ```
