@@ -152,9 +152,13 @@ install_zsh() {
 
         if grep -q "plugins=" "$HOME/.zshrc" 2>/dev/null; then
             if ! grep -q "dude" "$HOME/.zshrc" 2>/dev/null; then
-                echo ""
-                echo -e "  ${YELLOW}add 'dude' to your plugins in ~/.zshrc:${RESET}"
-                echo -e "  ${BOLD}plugins=(... dude)${RESET}"
+                # Add dude to the plugins list: plugins=(... dude)
+                if [[ "$OS" == "Darwin" ]]; then
+                    sed -i '' 's/^plugins=(\(.*\))/plugins=(\1 dude)/' "$HOME/.zshrc"
+                else
+                    sed -i 's/^plugins=(\(.*\))/plugins=(\1 dude)/' "$HOME/.zshrc"
+                fi
+                echo -e "  ${GREEN}✓${RESET} added 'dude' to plugins in ${BOLD}~/.zshrc${RESET}"
             fi
         fi
     else
@@ -163,9 +167,10 @@ install_zsh() {
         echo -e "  ${GREEN}✓${RESET} plugin installed to ${BOLD}$PLUGIN_INSTALL_DIR${RESET}"
 
         if ! grep -q "dude.plugin.zsh" "$HOME/.zshrc" 2>/dev/null; then
-            echo ""
-            echo -e "  ${YELLOW}add this to your ~/.zshrc:${RESET}"
-            echo -e "  ${BOLD}source \"\$HOME/.config/dude/dude.plugin.zsh\"${RESET}"
+            echo '' >> "$HOME/.zshrc"
+            echo '# dude — shell companion' >> "$HOME/.zshrc"
+            echo 'source "$HOME/.config/dude/dude.plugin.zsh"' >> "$HOME/.zshrc"
+            echo -e "  ${GREEN}✓${RESET} added source line to ${BOLD}~/.zshrc${RESET}"
         fi
     fi
 }
@@ -176,9 +181,10 @@ install_bash() {
     echo -e "  ${GREEN}✓${RESET} plugin installed to ${BOLD}$PLUGIN_INSTALL_DIR/dude.bash${RESET}"
 
     if ! grep -q "dude.bash" "$HOME/.bashrc" 2>/dev/null; then
-        echo ""
-        echo -e "  ${YELLOW}add this to your ~/.bashrc:${RESET}"
-        echo -e "  ${BOLD}source \"\$HOME/.config/dude/dude.bash\"${RESET}"
+        echo '' >> "$HOME/.bashrc"
+        echo '# dude — shell companion' >> "$HOME/.bashrc"
+        echo 'source "$HOME/.config/dude/dude.bash"' >> "$HOME/.bashrc"
+        echo -e "  ${GREEN}✓${RESET} added source line to ${BOLD}~/.bashrc${RESET}"
     fi
 }
 
