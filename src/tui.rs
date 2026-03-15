@@ -139,7 +139,7 @@ fn build_fields() -> Vec<ConfigField> {
                         c.claude_api_key = Some(v);
                     }
                 },
-                placeholder: "sk-ant-... (leave empty for keychain oauth)",
+                placeholder: "sk-ant-... (or use: dude setup-token <token>)",
             },
         },
         ConfigField {
@@ -184,10 +184,16 @@ impl App {
             .unwrap_or(false)
         {
             "API key (from config)".into()
+        } else if crate::config::token_path().exists() {
+            "OAuth (from setup-token)".into()
         } else if claude::check_available(&config) {
-            "OAuth (from macOS Keychain)".into()
+            if cfg!(target_os = "macos") {
+                "OAuth (from macOS Keychain)".into()
+            } else {
+                "OAuth".into()
+            }
         } else {
-            "Not configured".into()
+            "Not configured — use: dude setup-token <token>".into()
         };
         Self {
             config,
@@ -254,6 +260,14 @@ pub fn run_config_tui() {
                     }
                     KeyCode::Enter | KeyCode::Right | KeyCode::Char('l') => {
                         enter_field(&mut app);
+                    }
+                    KeyCode::Char('c') => {
+                        if app.fields[app.main_cursor].label == "Claude API Key" {
+                            app.config.claude_api_key = None;
+                            let _ = std::fs::remove_file(crate::config::token_path());
+                            app.claude_auth_cached = "Not configured — use: dude setup-token <token>".into();
+                            app.dirty = true;
+                        }
                     }
                     _ => {}
                 },
@@ -509,7 +523,13 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
 
     // Help bar
     let help_text = match &app.mode {
-        Mode::Main => " ↑↓ navigate  ⏎ edit  q save & exit",
+        Mode::Main => {
+            if app.fields[app.main_cursor].label == "Claude API Key" {
+                " ↑↓ navigate  ⏎ edit  c clear  q save & exit"
+            } else {
+                " ↑↓ navigate  ⏎ edit  q save & exit"
+            }
+        }
         Mode::Selecting { .. } => " ↑↓ navigate  ⏎ select  esc back",
         Mode::Editing { .. } => " type to edit  ⏎ confirm  esc cancel",
         Mode::EditingNumber { .. } => " type number  ⏎ confirm  esc cancel",

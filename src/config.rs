@@ -98,12 +98,13 @@ impl Config {
     pub fn needs_setup(&self) -> bool {
         match self.provider {
             Provider::Claude => {
-                // Claude is set up if there's an API key or env var (OAuth checked at runtime)
+                // Claude is set up if there's an API key, env var, or saved token file
                 let has_key = self.claude_api_key.as_deref().is_some_and(|k| !k.is_empty());
                 let has_env = std::env::var("ANTHROPIC_API_KEY")
                     .map(|k| !k.is_empty())
                     .unwrap_or(false);
-                !has_key && !has_env
+                let has_token_file = token_path().exists();
+                !has_key && !has_env && !has_token_file
             }
             Provider::Ollama => {
                 // Ollama works out of the box with defaults — only "needs setup"
@@ -202,6 +203,10 @@ pub fn history_path() -> PathBuf {
 
 pub fn session_path() -> PathBuf {
     dude_dir().join("session.jsonl")
+}
+
+pub fn token_path() -> PathBuf {
+    dude_dir().join(".claude_token")
 }
 
 pub fn last_cmd_path() -> PathBuf {

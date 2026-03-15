@@ -63,6 +63,11 @@ pub fn help() {
         "dude clear".white().bold(),
         "clear conversation session".dimmed()
     );
+    println!(
+        "  {} {}",
+        "dude setup-token <token>".white().bold(),
+        "set Claude API key or OAuth token".dimmed()
+    );
     println!();
     println!(
         "  {} {}",
@@ -364,6 +369,49 @@ pub fn safety_check(command: &str) {
             "{} {} — safe to auto-run",
             "dude:".yellow().bold(),
             command.green()
+        );
+    }
+}
+
+pub fn setup_token(token: &str) {
+    let token = token.trim();
+    if token.is_empty() {
+        eprintln!("{} token cannot be empty.", "dude:".red().bold());
+        std::process::exit(1);
+    }
+
+    let mut cfg = config::Config::load();
+
+    if token.starts_with("sk-ant-") && !token.starts_with("sk-ant-oat") {
+        // It's an API key — save to config, clear any OAuth token file
+        cfg.claude_api_key = Some(token.to_string());
+        cfg.provider = config::Provider::Claude;
+        cfg.save();
+        let _ = std::fs::remove_file(config::token_path());
+        eprintln!(
+            "{} API key saved. provider set to {}.",
+            "dude:".yellow().bold(),
+            "claude".white().bold()
+        );
+    } else {
+        // Treat as OAuth token — save to token file, clear API key from config
+        let path = config::token_path();
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&path, token);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+        }
+        cfg.claude_api_key = None;
+        cfg.provider = config::Provider::Claude;
+        cfg.save();
+        eprintln!(
+            "{} OAuth token saved. provider set to {}.",
+            "dude:".yellow().bold(),
+            "claude".white().bold()
         );
     }
 }

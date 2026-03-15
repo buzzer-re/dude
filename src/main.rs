@@ -77,6 +77,12 @@ enum Commands {
         /// The command to check
         command: Vec<String>,
     },
+    /// Set up Claude token (API key or OAuth token from Claude Code)
+    #[command(name = "setup-token")]
+    SetupToken {
+        /// The token (API key starting with sk-ant-... or OAuth token)
+        token: String,
+    },
 }
 
 fn main() {
@@ -108,6 +114,7 @@ fn main() {
         Some(Commands::Provider { name }) => commands::provider(name),
         Some(Commands::ClearSession) => commands::clear_session(),
         Some(Commands::SafetyCheck { command }) => commands::safety_check(&command.join(" ")),
+        Some(Commands::SetupToken { token }) => commands::setup_token(&token),
     }
 }
 
@@ -128,6 +135,7 @@ fn is_known_subcommand(arg: &str) -> bool {
             | "provider"
             | "clear"
             | "safety-check"
+            | "setup-token"
             | "help"
             | "--help"
             | "-h"

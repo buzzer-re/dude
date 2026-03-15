@@ -1,0 +1,20 @@
+FROM rust:latest
+
+WORKDIR /src
+COPY Cargo.toml Cargo.lock ./
+COPY src/ src/
+
+RUN cargo build --release && cp target/release/dude /usr/local/bin/dude
+
+# Install bash plugin
+COPY plugin/dude.bash /etc/dude/dude.bash
+
+# Create a test user
+RUN useradd -m -s /bin/bash tester
+USER tester
+WORKDIR /home/tester
+
+# Source the plugin in bashrc
+RUN echo 'source /etc/dude/dude.bash' >> ~/.bashrc
+
+CMD ["bash", "-i"]

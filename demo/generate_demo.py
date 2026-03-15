@@ -692,10 +692,10 @@ def scene_typo(frame_counter):
 
 
 def scene_question(frame_counter):
-    """Scene 2: Ask dude a question with ? prefix (~3s)."""
+    """Scene 2: Natural language query (~3s)."""
     term = Terminal()
 
-    frame_counter = type_text(term, PROMPT, "? kill whatever is on port 3000", frame_counter, char_delay=1)
+    frame_counter = type_text(term, PROMPT, "kill whatever is on port 3000", frame_counter, char_delay=1)
     frame_counter = hold_frames(term, FPS // 4, frame_counter)
 
     term.add_line([("dude: ", YELLOW), ("lsof -ti:3000 | xargs kill -9", WHITE)])
@@ -745,16 +745,18 @@ def scene_followup(frame_counter):
     """Scene 4: Follow-up questions (session memory) (~5s)."""
     term = Terminal()
 
-    frame_counter = type_text(term, PROMPT, "? find files larger than 100mb", frame_counter, char_delay=1)
+    frame_counter = type_text(term, PROMPT, "find files larger than 100mb", frame_counter, char_delay=1)
     frame_counter = hold_frames(term, FPS // 4, frame_counter)
 
     term.add_line([("dude: ", YELLOW), ("find . -size +100M -type f", WHITE)])
     frame_counter = hold_frames(term, FPS, frame_counter)
 
     # Follow-up
-    frame_counter = type_text(term, PROMPT, "? now only in downloads", frame_counter, char_delay=1)
+    frame_counter = type_text(term, PROMPT, "now only in downloads", frame_counter, char_delay=1)
     frame_counter = hold_frames(term, FPS // 4, frame_counter)
 
+    term.add_line([("                              ", FG),
+                   ("\u2190 just type in natural language", DIM)])
     term.add_line([("dude: ", YELLOW), ("find ~/Downloads -size +100M -type f", WHITE)])
     frame_counter = hold_frames(term, FPS, frame_counter)
 
@@ -852,9 +854,9 @@ def scene_montage(frame_counter):
         ("suod apt update",       "sudo apt update",           True),
         ("brwe install ffmpeg",   "brew install ffmpeg",       True),
         ("kucbectl get pods",     "kubectl get pods",          True),
-        ("? how to exit vim",     ":wq",                       False),
-        ("? whats my ip",         "curl -s ifconfig.me",       False),
-        ("? undo last commit",    "git reset --soft HEAD~1",   False),
+        ("how to exit vim",      ":wq",                        True),
+        ("whats my ip",          "curl -s ifconfig.me",        True),
+        ("show me large files",   "find . -size +100M -type f", True),
     ]
 
     term = Terminal()
@@ -896,7 +898,7 @@ def scene_dude_help(frame_counter):
     term.add_line([])
     term.add_line([("  dude <question>", WHITE),     ("   no subcommand needed", DIM)])
     term.add_line([("  cmd | dude <q>", WHITE),      ("    pipe mode", DIM)])
-    term.add_line([("  ? <question>", WHITE),        ("       quick ask (shell plugin)", DIM)])
+    term.add_line([("  just type it", WHITE),         ("      natural language works too", DIM)])
     frame_counter = hold_frames(term, FPS * 4, frame_counter)
 
     return frame_counter

@@ -49,24 +49,44 @@ enum AuthMethod {
 
 /// Resolve the best auth method available.
 fn resolve_auth(config: &Config) -> Result<AuthMethod, String> {
-    // 1. Check config for explicit API key
-    if let Some(key) = config.claude_api_key.as_deref().filter(|k| !k.is_empty()) {
-        return Ok(AuthMethod::ApiKey(key.to_string()));
-    }
-
-    // 2. Check ANTHROPIC_API_KEY env var
+    // 1. ANTHROPIC_API_KEY env var (explicit override, always wins)
     if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
         if !key.is_empty() {
             return Ok(AuthMethod::ApiKey(key));
         }
     }
 
-    // 3. Try macOS Keychain (Claude Code OAuth credentials)
+    // 2. Saved token file (from `dude setup-token`) — most recent explicit setup
+    if let Some(token) = read_token_file() {
+        if token.starts_with("sk-ant-") && !token.starts_with("sk-ant-oat") {
+            return Ok(AuthMethod::ApiKey(token));
+        } else {
+            return Ok(AuthMethod::OAuth(token));
+        }
+    }
+
+    // 3. macOS Keychain (Claude Code OAuth credentials)
     if let Some(token) = read_keychain_oauth() {
         return Ok(AuthMethod::OAuth(token));
     }
 
-    Err("dude: no claude credentials found. set claude_api_key in config, ANTHROPIC_API_KEY env var, or log in with Claude Code".to_string())
+    // 4. Config file API key (fallback)
+    if let Some(key) = config.claude_api_key.as_deref().filter(|k| !k.is_empty()) {
+        return Ok(AuthMethod::ApiKey(key.to_string()));
+    }
+
+    Err("dude: no claude credentials found.\n  • API key: dude setup-token sk-ant-...\n  • OAuth:   dude setup-token <token> (get it from Claude Code with /oauth-token)".to_string())
+}
+
+/// Read token from the saved token file (set by `dude setup-token`).
+fn read_token_file() -> Option<String> {
+    let path = crate::config::token_path();
+    let token = std::fs::read_to_string(path).ok()?.trim().to_string();
+    if token.is_empty() {
+        None
+    } else {
+        Some(token)
+    }
 }
 
 /// Read OAuth access token from macOS Keychain (Claude Code credentials).

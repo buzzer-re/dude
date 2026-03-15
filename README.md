@@ -8,6 +8,33 @@ You know when you type `gti status` instead of `git status` and your terminal ju
 
 Dude sits in your shell, watches you mess up, and quietly suggests what you probably meant. It remembers your mistakes and gets faster the more you use it. All locally. No cloud unless you want it.
 
+> This project was vibecoded with [Claude Code](https://claude.ai/claude-code) — just a fun experiment in building useful tools with AI. Don't take it too seriously, but it actually works pretty well.
+
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/buzzer-re/dude/main/install.sh | bash
+```
+
+Works on macOS and Linux (`x86_64` and `aarch64`). The script auto-detects your platform and shell.
+
+**From source:**
+```bash
+git clone https://github.com/buzzer-re/dude.git
+cd dude
+./install.sh
+```
+
+### Shell Support
+
+| Shell | Plugin | How It Works |
+|-------|--------|-------------|
+| **Zsh** | `dude.plugin.zsh` | `command_not_found_handler` |
+| **Bash** | `dude.bash` | `command_not_found_handle` (no trailing 'r') |
+| **Fish** | `dude.fish` | `fish_command_not_found` event, auto-loads from `conf.d/` |
+
+The install script auto-detects your shell and installs the right plugin.
+
 ## What It Does
 
 ```
@@ -53,7 +80,8 @@ Dude works with two backends — pick one or both:
 ### Ollama (Local, Free, Private)
 
 ```bash
-brew install ollama
+brew install ollama        # macOS
+# or: curl -fsSL https://ollama.ai/install.sh | sh   # Linux
 ollama serve
 ollama pull qwen2.5-coder:1.5b   # fast + small, good for corrections
 ```
@@ -73,28 +101,6 @@ You can also use a direct API key:
 export ANTHROPIC_API_KEY="sk-ant-..."
 dude provider claude
 ```
-
-## Install
-
-**One-liner** (downloads pre-built binary from GitHub releases):
-```bash
-curl -fsSL https://raw.githubusercontent.com/buzzer-re/dude/main/install.sh | bash
-```
-
-**From source** (if you prefer or no release exists yet):
-```bash
-git clone https://github.com/buzzer-re/dude.git
-cd dude
-./install.sh
-```
-
-### Shell Support
-
-| Shell | Plugin | How It Works |
-|-------|--------|-------------|
-| **Zsh** | `dude.plugin.zsh` | `command_not_found_handler` |
-| **Bash** | `dude.bash` | `command_not_found_handle` (no trailing 'r') |
-| **Fish** | `dude.fish` | `fish_command_not_found` event, auto-loads from `conf.d/` |
 
 ## Usage
 
@@ -128,7 +134,10 @@ dude forget                     # Nuclear option — wipe all learned data
 
 ## Config
 
-Run `dude config` for an interactive TUI, or edit `~/Library/Application Support/dude/config.toml`:
+Run `dude config` for an interactive TUI, or edit the config file:
+
+- **macOS:** `~/Library/Application Support/dude/config.toml`
+- **Linux:** `~/.config/dude/config.toml`
 
 ```toml
 provider = "claude"                          # or "ollama"
