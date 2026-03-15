@@ -57,8 +57,7 @@ command_not_found_handle() {
     safety_exit=$?
 
     if [[ $safety_exit -eq 0 ]]; then
-        "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &>/dev/null &
-        disown
+        "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &>/dev/null
         history -s "$suggestion"
         eval "$suggestion"
         local ret=$?
@@ -77,8 +76,7 @@ command_not_found_handle() {
     echo >&2
 
     if [[ "$response" == "" || "$response" == "y" || "$response" == "Y" ]]; then
-        "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &>/dev/null &
-        disown
+        "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &>/dev/null
         history -s "$suggestion"
         eval "$suggestion"
     else

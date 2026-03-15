@@ -12,6 +12,8 @@ impl Corrections {
             let _ = std::fs::create_dir_all(parent);
         }
         let conn = Connection::open(&path)?;
+        // Use WAL mode for better concurrent access, and full sync to avoid data loss
+        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;")?;
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS corrections (
                 typo TEXT NOT NULL,

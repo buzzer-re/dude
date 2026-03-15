@@ -51,8 +51,7 @@ function fish_command_not_found
     set -l safety_exit $status
 
     if test $safety_exit -eq 0
-        $DUDE_BIN accept "$failed_cmd" "$suggestion" &>/dev/null &
-        disown
+        $DUDE_BIN accept "$failed_cmd" "$suggestion" &>/dev/null
         builtin history merge
         builtin history add -- "$suggestion"
         eval $suggestion
@@ -69,8 +68,7 @@ function fish_command_not_found
     # Needs confirmation
     read -P "  run it? [Y/n] " -n 1 response
     if test -z "$response"; or test "$response" = y; or test "$response" = Y
-        $DUDE_BIN accept "$failed_cmd" "$suggestion" &>/dev/null &
-        disown
+        $DUDE_BIN accept "$failed_cmd" "$suggestion" &>/dev/null
         builtin history merge
         builtin history add -- "$suggestion"
         eval $suggestion

@@ -59,7 +59,7 @@ command_not_found_handler() {
     safety_exit=$?
 
     if [[ $safety_exit -eq 0 ]]; then
-        "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &!
+        "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &>/dev/null
         print -s "$suggestion"
         eval "$suggestion"
         local ret=$?
@@ -77,7 +77,7 @@ command_not_found_handler() {
     echo >&2
 
     if [[ "$response" == $'\n' || "$response" == "y" || "$response" == "Y" || "$response" == "" ]]; then
-        "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &!
+        "$DUDE_BIN" accept "$failed_cmd" "$suggestion" &>/dev/null
         print -s "$suggestion"
         eval "$suggestion"
     else
