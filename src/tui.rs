@@ -15,6 +15,7 @@ use std::io::stdout;
 
 use crate::claude;
 use crate::config::Config;
+use crate::ollama;
 
 // ─── Field definitions ──────────────────────────────────────────────────
 
@@ -45,13 +46,27 @@ enum FieldKind {
     },
 }
 
-fn build_fields() -> Vec<ConfigField> {
+fn build_fields(ollama_models: Vec<String>) -> Vec<ConfigField> {
+    // Build ollama model options from fetched models
+    // We leak the strings so they live for 'static (TUI runs once then exits)
+    let model_options: Vec<(&'static str, &'static str)> = if ollama_models.is_empty() {
+        vec![("qwen2.5-coder:1.5b", "type model name or start ollama")]
+    } else {
+        ollama_models
+            .into_iter()
+            .map(|name| {
+                let leaked: &'static str = Box::leak(name.into_boxed_str());
+                (leaked, "" as &'static str)
+            })
+            .collect()
+    };
+
     vec![
         ConfigField {
             label: "Provider",
             kind: FieldKind::Select {
                 options: vec![
-                    ("ollama", "Local LLM via ollama"),
+                    ("ollama", "Local LLM via ollama / OpenAI-compatible"),
                     ("claude", "Anthropic Claude API"),
                 ],
                 get: |c| c.provider.to_string(),
@@ -65,16 +80,7 @@ fn build_fields() -> Vec<ConfigField> {
         ConfigField {
             label: "Ollama Model",
             kind: FieldKind::Select {
-                options: vec![
-                    (
-                        "qwen2.5-coder:1.5b",
-                        "Fast, small — best for typo correction",
-                    ),
-                    ("qwen2.5-coder:7b", "Balanced speed and smarts"),
-                    ("llama3.1:8b", "Good all-rounder"),
-                    ("qwen3.5:2b", "Reasoning model (slower)"),
-                    ("gemma3:4b", "Google's compact model"),
-                ],
+                options: model_options,
                 get: |c| c.model.clone(),
                 set: |c, v| c.model = v,
             },
@@ -112,7 +118,7 @@ fn build_fields() -> Vec<ConfigField> {
             kind: FieldKind::Text {
                 get: |c| c.ollama_url.clone(),
                 set: |c, v| c.ollama_url = v,
-                placeholder: "http://localhost:11434",
+                placeholder: "http://localhost:11434 (works with LM Studio, etc.)",
             },
         },
         ConfigField {
@@ -176,7 +182,7 @@ struct App {
 }
 
 impl App {
-    fn new(config: Config) -> Self {
+    fn new(config: Config, ollama_models: Vec<String>) -> Self {
         let claude_auth_cached = if config
             .claude_api_key
             .as_deref()
@@ -197,7 +203,7 @@ impl App {
         };
         Self {
             config,
-            fields: build_fields(),
+            fields: build_fields(ollama_models),
             main_cursor: 0,
             mode: Mode::Main,
             dirty: false,
@@ -223,7 +229,8 @@ impl App {
 
 pub fn run_config_tui() {
     let config = Config::load();
-    let mut app = App::new(config);
+    let ollama_models = ollama::list_models(&config);
+    let mut app = App::new(config, ollama_models);
 
     // Setup terminal — bail gracefully if not a real TTY
     if enable_raw_mode().is_err() {
@@ -320,6 +327,10 @@ pub fn run_config_tui() {
                                 set(&mut app.config, buffer.clone());
                                 app.dirty = true;
                             }
+                            // Refresh Ollama model list if URL was changed
+                            if app.fields[field_idx].label == "Ollama URL" {
+                                refresh_ollama_models(&mut app);
+                            }
                             app.mode = Mode::Main;
                         }
                         KeyCode::Esc => {
@@ -381,6 +392,33 @@ pub fn run_config_tui() {
             "{} config saved.",
             colored::Colorize::bold(colored::Colorize::yellow("dude:"))
         );
+    }
+}
+
+fn refresh_ollama_models(app: &mut App) {
+    let url = app.config.effective_ollama_url();
+    let models = ollama::list_models_from_url(url);
+    let model_options: Vec<(&'static str, &'static str)> = if models.is_empty() {
+        vec![("qwen2.5-coder:1.5b", "no models found — is server running?")]
+    } else {
+        models
+            .into_iter()
+            .map(|name| {
+                let leaked: &'static str = Box::leak(name.into_boxed_str());
+                (leaked, "" as &'static str)
+            })
+            .collect()
+    };
+    // Find the Ollama Model field and replace its options
+    for field in &mut app.fields {
+        if field.label == "Ollama Model" {
+            field.kind = FieldKind::Select {
+                options: model_options,
+                get: |c| c.model.clone(),
+                set: |c, v| c.model = v,
+            };
+            break;
+        }
     }
 }
 

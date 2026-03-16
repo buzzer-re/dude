@@ -25,15 +25,63 @@ struct OllamaResponse {
     thinking: Option<String>,
 }
 
-pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<String, String> {
-    let client = crate::config::http_client(60)?;
+// ─── OpenAI-compatible request/response types ──────────────────────────
 
+#[derive(Serialize)]
+struct OpenAIRequest {
+    model: String,
+    messages: Vec<OpenAIMessage>,
+    temperature: f32,
+    max_tokens: i32,
+    stream: bool,
+}
+
+#[derive(Serialize)]
+struct OpenAIMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(Deserialize)]
+struct OpenAIResponse {
+    choices: Vec<OpenAIChoice>,
+}
+
+#[derive(Deserialize)]
+struct OpenAIChoice {
+    message: OpenAIRespMessage,
+}
+
+#[derive(Deserialize)]
+struct OpenAIRespMessage {
+    content: String,
+}
+
+pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<String, String> {
+    let base_url = config.effective_ollama_url();
     let model = config.effective_model();
 
-    // Reasoning models burn tokens on <think> tags. Give them more budget.
-    let is_reasoning_model = model.starts_with("qwen3") || model.contains("deepseek-r1");
-    let token_budget = if is_reasoning_model { 1000 } else { 300 };
+    let token_budget = 2000;
 
+    // Try Ollama format first (short timeout — if it's not Ollama, fail fast)
+    let probe_client = crate::config::http_client(5)?;
+    if let Ok(answer) = query_ollama(&probe_client, base_url, model, system_prompt, user_prompt, token_budget) {
+        return Ok(answer);
+    }
+
+    // Fall back to OpenAI-compatible format (LM Studio, LocalAI, etc.)
+    let client = crate::config::http_client(120)?;
+    query_openai(&client, base_url, model, system_prompt, user_prompt, token_budget)
+}
+
+fn query_ollama(
+    client: &reqwest::blocking::Client,
+    base_url: &str,
+    model: &str,
+    system_prompt: &str,
+    user_prompt: &str,
+    token_budget: i32,
+) -> Result<String, String> {
     let request = OllamaRequest {
         model: model.to_string(),
         prompt: user_prompt.to_string(),
@@ -45,30 +93,24 @@ pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<
         },
     };
 
-    let url = format!("{}/api/generate", config.effective_ollama_url());
+    let url = format!("{}/api/generate", base_url);
 
     let resp = client.post(&url).json(&request).send().map_err(|e| {
         if e.is_connect() {
-            "dude: can't reach ollama. is it running? try: ollama serve".to_string()
+            "dude: can't reach server. is it running?".to_string()
         } else if e.is_timeout() {
-            "dude: ollama took too long to respond".to_string()
+            "dude: server took too long to respond".to_string()
         } else {
-            format!("dude: ollama error: {e}")
+            format!("dude: server error: {e}")
         }
     })?;
 
     if !resp.status().is_success() {
-        let status = resp.status();
-        let body = resp.text().unwrap_or_default();
-        return Err(format!("dude: ollama returned {status}: {body}"));
+        return Err("ollama format failed".into());
     }
 
-    let parsed: OllamaResponse = resp
-        .json()
-        .map_err(|e| format!("dude: bad response from ollama: {e}"))?;
+    let parsed: OllamaResponse = resp.json().map_err(|_| "ollama parse failed".to_string())?;
 
-    // Reasoning models may put the answer in response, or burn all tokens on thinking.
-    // If response is empty but thinking exists, try to extract the answer from thinking.
     let answer = if parsed.response.trim().is_empty() {
         if let Some(thinking) = &parsed.thinking {
             extract_answer_from_thinking(thinking)
@@ -79,7 +121,77 @@ pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<
         parsed.response.trim().to_string()
     };
 
-    Ok(answer)
+    if answer.is_empty() {
+        Err("empty response".into())
+    } else {
+        Ok(answer)
+    }
+}
+
+fn query_openai(
+    client: &reqwest::blocking::Client,
+    base_url: &str,
+    model: &str,
+    system_prompt: &str,
+    user_prompt: &str,
+    token_budget: i32,
+) -> Result<String, String> {
+    let request = OpenAIRequest {
+        model: model.to_string(),
+        messages: vec![
+            OpenAIMessage {
+                role: "system".into(),
+                content: system_prompt.to_string(),
+            },
+            OpenAIMessage {
+                role: "user".into(),
+                content: user_prompt.to_string(),
+            },
+        ],
+        temperature: 0.1,
+        max_tokens: token_budget,
+        stream: false,
+    };
+
+    let url = format!("{}/v1/chat/completions", base_url);
+
+    let resp = client.post(&url).json(&request).send().map_err(|e| {
+        if e.is_connect() {
+            "dude: can't reach server. is it running?".to_string()
+        } else if e.is_timeout() {
+            "dude: server took too long to respond".to_string()
+        } else {
+            format!("dude: server error: {e}")
+        }
+    })?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().unwrap_or_default();
+        return Err(format!("dude: server returned {status}: {body}"));
+    }
+
+    let parsed: OpenAIResponse = resp
+        .json()
+        .map_err(|e| format!("dude: bad response from server: {e}"))?;
+
+    let text = parsed
+        .choices
+        .first()
+        .map(|c| c.message.content.trim().to_string())
+        .unwrap_or_default();
+
+    // If response is only <think> content (reasoning model ran out of tokens),
+    // try to extract from the thinking text
+    if text.starts_with("<think>") && !text.contains("</think>") {
+        let thinking = text.trim_start_matches("<think>").trim();
+        let extracted = extract_answer_from_thinking(thinking);
+        if !extracted.is_empty() {
+            return Ok(extracted);
+        }
+    }
+
+    Ok(text)
 }
 
 /// When a reasoning model burns all tokens on thinking and produces no response,
@@ -110,6 +222,71 @@ fn extract_answer_from_thinking(thinking: &str) -> String {
     }
 
     best_candidate
+}
+
+/// Fetch installed model names. Tries Ollama API first, then OpenAI-compatible.
+pub fn list_models_from_url(base_url: &str) -> Vec<String> {
+    let Ok(client) = crate::config::http_client(3) else {
+        return vec![];
+    };
+
+    // Try Ollama format: /api/tags
+    if let Some(models) = try_ollama_models(&client, base_url) {
+        if !models.is_empty() {
+            return models;
+        }
+    }
+
+    // Try OpenAI-compatible format: /v1/models (LM Studio, LocalAI, etc.)
+    if let Some(models) = try_openai_models(&client, base_url) {
+        if !models.is_empty() {
+            return models;
+        }
+    }
+
+    vec![]
+}
+
+fn try_ollama_models(client: &reqwest::blocking::Client, base_url: &str) -> Option<Vec<String>> {
+    #[derive(Deserialize)]
+    struct TagsResponse {
+        models: Vec<ModelEntry>,
+    }
+    #[derive(Deserialize)]
+    struct ModelEntry {
+        name: String,
+    }
+
+    let url = format!("{}/api/tags", base_url);
+    let resp = client.get(&url).send().ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    let tags: TagsResponse = resp.json().ok()?;
+    Some(tags.models.into_iter().map(|m| m.name).collect())
+}
+
+fn try_openai_models(client: &reqwest::blocking::Client, base_url: &str) -> Option<Vec<String>> {
+    #[derive(Deserialize)]
+    struct ModelsResponse {
+        data: Vec<ModelEntry>,
+    }
+    #[derive(Deserialize)]
+    struct ModelEntry {
+        id: String,
+    }
+
+    let url = format!("{}/v1/models", base_url);
+    let resp = client.get(&url).send().ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    let models: ModelsResponse = resp.json().ok()?;
+    Some(models.data.into_iter().map(|m| m.id).collect())
+}
+
+pub fn list_models(config: &Config) -> Vec<String> {
+    list_models_from_url(config.effective_ollama_url())
 }
 
 pub fn check_available(config: &Config) -> bool {

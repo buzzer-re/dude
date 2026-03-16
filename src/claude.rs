@@ -119,7 +119,7 @@ fn read_keychain_oauth() -> Option<String> {
 pub fn query(system_prompt: &str, user_prompt: &str, config: &Config) -> Result<String, String> {
     let auth = resolve_auth(config)?;
 
-    let client = crate::config::http_client(60)?;
+    let client = crate::config::http_client(120)?;
 
     let model = config.effective_claude_model();
 

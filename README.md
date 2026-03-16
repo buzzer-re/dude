@@ -88,6 +88,13 @@ ollama serve
 ollama pull qwen2.5-coder:1.5b   # fast + small, good for corrections
 ```
 
+Any OpenAI-compatible API works too (LM Studio, LocalAI, etc.) — just set the URL:
+```bash
+dude provider ollama
+dude model your-model-name
+```
+Edit `ollama_url` in config to point to your server.
+
 ### Claude (Smart, Fast, Not Free)
 
 If you have [Claude Code](https://claude.ai/claude-code) installed, Dude reads your OAuth token from the macOS Keychain automatically. No config needed.
